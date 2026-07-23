@@ -1,14 +1,20 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, Ticket } from "lucide-react";
+
+const authSearchSchema = z.object({
+  invite: z.string().trim().min(1).max(64).optional(),
+});
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: authSearchSchema,
   head: () => ({
     meta: [
       { title: "Dlovebox — Acceso" },
@@ -26,10 +32,12 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const { invite } = Route.useSearch();
+  const [mode, setMode] = useState<"signin" | "signup">(invite ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [inviteCode, setInviteCode] = useState(invite ?? "");
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -37,15 +45,23 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
+        const trimmedInvite = inviteCode.trim();
         const { error } = await supabase.auth.signUp({
           email, password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            data: { full_name: name },
+            data: {
+              full_name: name,
+              ...(trimmedInvite ? { invite_code: trimmedInvite } : {}),
+            },
           },
         });
         if (error) throw error;
-        toast.success("Cuenta creada. Revisa tu correo si tu proyecto lo requiere.");
+        toast.success(
+          trimmedInvite
+            ? "Cuenta creada con invitación. Revisa tu correo si tu proyecto lo requiere."
+            : "Cuenta creada. Revisa tu correo si tu proyecto lo requiere.",
+        );
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -98,13 +114,29 @@ function AuthPage() {
           <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} />
         </div>
 
+        {mode === "signup" && (
+          <div className="space-y-2">
+            <Label htmlFor="invite" className="flex items-center gap-1.5">
+              <Ticket className="h-3.5 w-3.5" /> Código de invitación
+              <span className="text-[10px] font-normal text-muted-foreground">(opcional)</span>
+            </Label>
+            <Input
+              id="invite"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              placeholder="Ej. ABCD23XYZ7"
+              autoComplete="off"
+            />
+          </div>
+        )}
+
         <Button type="submit" disabled={loading} className="w-full rounded-full h-12 font-semibold">
           {loading ? "Cargando..." : mode === "signin" ? "Ingresar" : "Crear cuenta"}
         </Button>
 
         {mode === "signup" && (
           <p className="text-center text-xs text-muted-foreground">
-            El primer usuario se convierte automáticamente en administrador.
+            Con código de invitación válido tu cuenta será administrador. Sin código, el primer usuario del sistema se convierte en admin automáticamente.
           </p>
         )}
       </form>

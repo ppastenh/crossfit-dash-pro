@@ -23,6 +23,7 @@ import { Route as AuthenticatedAdminMoreSettingsRouteImport } from './routes/_au
 import { Route as AuthenticatedAdminMoreReportsRouteImport } from './routes/_authenticated/_admin/more/reports'
 import { Route as AuthenticatedAdminMorePlansRouteImport } from './routes/_authenticated/_admin/more/plans'
 import { Route as AuthenticatedAdminMoreNotificationsRouteImport } from './routes/_authenticated/_admin/more/notifications'
+import { Route as AuthenticatedAdminMoreInvitesRouteImport } from './routes/_authenticated/_admin/more/invites'
 import { Route as AuthenticatedAdminMoreFilesRouteImport } from './routes/_authenticated/_admin/more/files'
 import { Route as AuthenticatedAdminMoreCoachesRouteImport } from './routes/_authenticated/_admin/more/coaches'
 import { Route as AuthenticatedAdminMembersIdRouteImport } from './routes/_authenticated/_admin/members.$id'
@@ -105,6 +106,12 @@ const AuthenticatedAdminMoreNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AuthenticatedAdminMoreRoute,
   } as any)
+const AuthenticatedAdminMoreInvitesRoute =
+  AuthenticatedAdminMoreInvitesRouteImport.update({
+    id: '/invites',
+    path: '/invites',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
 const AuthenticatedAdminMoreFilesRoute =
   AuthenticatedAdminMoreFilesRouteImport.update({
     id: '/files',
@@ -143,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/members/$id': typeof AuthenticatedAdminMembersIdRoute
   '/more/coaches': typeof AuthenticatedAdminMoreCoachesRoute
   '/more/files': typeof AuthenticatedAdminMoreFilesRoute
+  '/more/invites': typeof AuthenticatedAdminMoreInvitesRoute
   '/more/notifications': typeof AuthenticatedAdminMoreNotificationsRoute
   '/more/plans': typeof AuthenticatedAdminMorePlansRoute
   '/more/reports': typeof AuthenticatedAdminMoreReportsRoute
@@ -161,6 +169,7 @@ export interface FileRoutesByTo {
   '/members/$id': typeof AuthenticatedAdminMembersIdRoute
   '/more/coaches': typeof AuthenticatedAdminMoreCoachesRoute
   '/more/files': typeof AuthenticatedAdminMoreFilesRoute
+  '/more/invites': typeof AuthenticatedAdminMoreInvitesRoute
   '/more/notifications': typeof AuthenticatedAdminMoreNotificationsRoute
   '/more/plans': typeof AuthenticatedAdminMorePlansRoute
   '/more/reports': typeof AuthenticatedAdminMoreReportsRoute
@@ -182,6 +191,7 @@ export interface FileRoutesById {
   '/_authenticated/_admin/members/$id': typeof AuthenticatedAdminMembersIdRoute
   '/_authenticated/_admin/more/coaches': typeof AuthenticatedAdminMoreCoachesRoute
   '/_authenticated/_admin/more/files': typeof AuthenticatedAdminMoreFilesRoute
+  '/_authenticated/_admin/more/invites': typeof AuthenticatedAdminMoreInvitesRoute
   '/_authenticated/_admin/more/notifications': typeof AuthenticatedAdminMoreNotificationsRoute
   '/_authenticated/_admin/more/plans': typeof AuthenticatedAdminMorePlansRoute
   '/_authenticated/_admin/more/reports': typeof AuthenticatedAdminMoreReportsRoute
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/members/$id'
     | '/more/coaches'
     | '/more/files'
+    | '/more/invites'
     | '/more/notifications'
     | '/more/plans'
     | '/more/reports'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/members/$id'
     | '/more/coaches'
     | '/more/files'
+    | '/more/invites'
     | '/more/notifications'
     | '/more/plans'
     | '/more/reports'
@@ -240,6 +252,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin/members/$id'
     | '/_authenticated/_admin/more/coaches'
     | '/_authenticated/_admin/more/files'
+    | '/_authenticated/_admin/more/invites'
     | '/_authenticated/_admin/more/notifications'
     | '/_authenticated/_admin/more/plans'
     | '/_authenticated/_admin/more/reports'
@@ -352,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminMoreNotificationsRouteImport
       parentRoute: typeof AuthenticatedAdminMoreRoute
     }
+    '/_authenticated/_admin/more/invites': {
+      id: '/_authenticated/_admin/more/invites'
+      path: '/invites'
+      fullPath: '/more/invites'
+      preLoaderRoute: typeof AuthenticatedAdminMoreInvitesRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
     '/_authenticated/_admin/more/files': {
       id: '/_authenticated/_admin/more/files'
       path: '/files'
@@ -414,6 +434,7 @@ const AuthenticatedAdminMembersRouteWithChildren =
 interface AuthenticatedAdminMoreRouteChildren {
   AuthenticatedAdminMoreCoachesRoute: typeof AuthenticatedAdminMoreCoachesRoute
   AuthenticatedAdminMoreFilesRoute: typeof AuthenticatedAdminMoreFilesRoute
+  AuthenticatedAdminMoreInvitesRoute: typeof AuthenticatedAdminMoreInvitesRoute
   AuthenticatedAdminMoreNotificationsRoute: typeof AuthenticatedAdminMoreNotificationsRoute
   AuthenticatedAdminMorePlansRoute: typeof AuthenticatedAdminMorePlansRoute
   AuthenticatedAdminMoreReportsRoute: typeof AuthenticatedAdminMoreReportsRoute
@@ -424,6 +445,7 @@ const AuthenticatedAdminMoreRouteChildren: AuthenticatedAdminMoreRouteChildren =
   {
     AuthenticatedAdminMoreCoachesRoute: AuthenticatedAdminMoreCoachesRoute,
     AuthenticatedAdminMoreFilesRoute: AuthenticatedAdminMoreFilesRoute,
+    AuthenticatedAdminMoreInvitesRoute: AuthenticatedAdminMoreInvitesRoute,
     AuthenticatedAdminMoreNotificationsRoute:
       AuthenticatedAdminMoreNotificationsRoute,
     AuthenticatedAdminMorePlansRoute: AuthenticatedAdminMorePlansRoute,
