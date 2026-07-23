@@ -9,38 +9,265 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/_admin'
+import { Route as AuthenticatedAdminMoreRouteImport } from './routes/_authenticated/_admin/more'
+import { Route as AuthenticatedAdminMembersRouteImport } from './routes/_authenticated/_admin/members'
+import { Route as AuthenticatedAdminFinancesRouteImport } from './routes/_authenticated/_admin/finances'
+import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/_admin/dashboard'
+import { Route as AuthenticatedAdminClassesRouteImport } from './routes/_authenticated/_admin/classes'
+import { Route as AuthenticatedAdminAttendanceRouteImport } from './routes/_authenticated/_admin/attendance'
+import { Route as AuthenticatedAdminMoreSettingsRouteImport } from './routes/_authenticated/_admin/more/settings'
+import { Route as AuthenticatedAdminMoreReportsRouteImport } from './routes/_authenticated/_admin/more/reports'
+import { Route as AuthenticatedAdminMorePlansRouteImport } from './routes/_authenticated/_admin/more/plans'
+import { Route as AuthenticatedAdminMoreNotificationsRouteImport } from './routes/_authenticated/_admin/more/notifications'
+import { Route as AuthenticatedAdminMoreFilesRouteImport } from './routes/_authenticated/_admin/more/files'
+import { Route as AuthenticatedAdminMoreCoachesRouteImport } from './routes/_authenticated/_admin/more/coaches'
+import { Route as AuthenticatedAdminMembersIdRouteImport } from './routes/_authenticated/_admin/members.$id'
+import { Route as AuthenticatedAdminClassesIdRouteImport } from './routes/_authenticated/_admin/classes.$id'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminMoreRoute = AuthenticatedAdminMoreRouteImport.update({
+  id: '/more',
+  path: '/more',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedAdminMembersRoute =
+  AuthenticatedAdminMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminFinancesRoute =
+  AuthenticatedAdminFinancesRouteImport.update({
+    id: '/finances',
+    path: '/finances',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminDashboardRoute =
+  AuthenticatedAdminDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminClassesRoute =
+  AuthenticatedAdminClassesRouteImport.update({
+    id: '/classes',
+    path: '/classes',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminAttendanceRoute =
+  AuthenticatedAdminAttendanceRouteImport.update({
+    id: '/attendance',
+    path: '/attendance',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMoreSettingsRoute =
+  AuthenticatedAdminMoreSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
+const AuthenticatedAdminMoreReportsRoute =
+  AuthenticatedAdminMoreReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
+const AuthenticatedAdminMorePlansRoute =
+  AuthenticatedAdminMorePlansRouteImport.update({
+    id: '/plans',
+    path: '/plans',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
+const AuthenticatedAdminMoreNotificationsRoute =
+  AuthenticatedAdminMoreNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
+const AuthenticatedAdminMoreFilesRoute =
+  AuthenticatedAdminMoreFilesRouteImport.update({
+    id: '/files',
+    path: '/files',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
+const AuthenticatedAdminMoreCoachesRoute =
+  AuthenticatedAdminMoreCoachesRouteImport.update({
+    id: '/coaches',
+    path: '/coaches',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
+const AuthenticatedAdminMembersIdRoute =
+  AuthenticatedAdminMembersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAdminMembersRoute,
+  } as any)
+const AuthenticatedAdminClassesIdRoute =
+  AuthenticatedAdminClassesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAdminClassesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/attendance': typeof AuthenticatedAdminAttendanceRoute
+  '/classes': typeof AuthenticatedAdminClassesRouteWithChildren
+  '/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/finances': typeof AuthenticatedAdminFinancesRoute
+  '/members': typeof AuthenticatedAdminMembersRouteWithChildren
+  '/more': typeof AuthenticatedAdminMoreRouteWithChildren
+  '/classes/$id': typeof AuthenticatedAdminClassesIdRoute
+  '/members/$id': typeof AuthenticatedAdminMembersIdRoute
+  '/more/coaches': typeof AuthenticatedAdminMoreCoachesRoute
+  '/more/files': typeof AuthenticatedAdminMoreFilesRoute
+  '/more/notifications': typeof AuthenticatedAdminMoreNotificationsRoute
+  '/more/plans': typeof AuthenticatedAdminMorePlansRoute
+  '/more/reports': typeof AuthenticatedAdminMoreReportsRoute
+  '/more/settings': typeof AuthenticatedAdminMoreSettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/attendance': typeof AuthenticatedAdminAttendanceRoute
+  '/classes': typeof AuthenticatedAdminClassesRouteWithChildren
+  '/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/finances': typeof AuthenticatedAdminFinancesRoute
+  '/members': typeof AuthenticatedAdminMembersRouteWithChildren
+  '/more': typeof AuthenticatedAdminMoreRouteWithChildren
+  '/classes/$id': typeof AuthenticatedAdminClassesIdRoute
+  '/members/$id': typeof AuthenticatedAdminMembersIdRoute
+  '/more/coaches': typeof AuthenticatedAdminMoreCoachesRoute
+  '/more/files': typeof AuthenticatedAdminMoreFilesRoute
+  '/more/notifications': typeof AuthenticatedAdminMoreNotificationsRoute
+  '/more/plans': typeof AuthenticatedAdminMorePlansRoute
+  '/more/reports': typeof AuthenticatedAdminMoreReportsRoute
+  '/more/settings': typeof AuthenticatedAdminMoreSettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/_admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/_admin/attendance': typeof AuthenticatedAdminAttendanceRoute
+  '/_authenticated/_admin/classes': typeof AuthenticatedAdminClassesRouteWithChildren
+  '/_authenticated/_admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/_authenticated/_admin/finances': typeof AuthenticatedAdminFinancesRoute
+  '/_authenticated/_admin/members': typeof AuthenticatedAdminMembersRouteWithChildren
+  '/_authenticated/_admin/more': typeof AuthenticatedAdminMoreRouteWithChildren
+  '/_authenticated/_admin/classes/$id': typeof AuthenticatedAdminClassesIdRoute
+  '/_authenticated/_admin/members/$id': typeof AuthenticatedAdminMembersIdRoute
+  '/_authenticated/_admin/more/coaches': typeof AuthenticatedAdminMoreCoachesRoute
+  '/_authenticated/_admin/more/files': typeof AuthenticatedAdminMoreFilesRoute
+  '/_authenticated/_admin/more/notifications': typeof AuthenticatedAdminMoreNotificationsRoute
+  '/_authenticated/_admin/more/plans': typeof AuthenticatedAdminMorePlansRoute
+  '/_authenticated/_admin/more/reports': typeof AuthenticatedAdminMoreReportsRoute
+  '/_authenticated/_admin/more/settings': typeof AuthenticatedAdminMoreSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/attendance'
+    | '/classes'
+    | '/dashboard'
+    | '/finances'
+    | '/members'
+    | '/more'
+    | '/classes/$id'
+    | '/members/$id'
+    | '/more/coaches'
+    | '/more/files'
+    | '/more/notifications'
+    | '/more/plans'
+    | '/more/reports'
+    | '/more/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/attendance'
+    | '/classes'
+    | '/dashboard'
+    | '/finances'
+    | '/members'
+    | '/more'
+    | '/classes/$id'
+    | '/members/$id'
+    | '/more/coaches'
+    | '/more/files'
+    | '/more/notifications'
+    | '/more/plans'
+    | '/more/reports'
+    | '/more/settings'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/_admin'
+    | '/_authenticated/_admin/attendance'
+    | '/_authenticated/_admin/classes'
+    | '/_authenticated/_admin/dashboard'
+    | '/_authenticated/_admin/finances'
+    | '/_authenticated/_admin/members'
+    | '/_authenticated/_admin/more'
+    | '/_authenticated/_admin/classes/$id'
+    | '/_authenticated/_admin/members/$id'
+    | '/_authenticated/_admin/more/coaches'
+    | '/_authenticated/_admin/more/files'
+    | '/_authenticated/_admin/more/notifications'
+    | '/_authenticated/_admin/more/plans'
+    | '/_authenticated/_admin/more/reports'
+    | '/_authenticated/_admin/more/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +275,204 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/_admin': {
+      id: '/_authenticated/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/_admin/more': {
+      id: '/_authenticated/_admin/more'
+      path: '/more'
+      fullPath: '/more'
+      preLoaderRoute: typeof AuthenticatedAdminMoreRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/members': {
+      id: '/_authenticated/_admin/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof AuthenticatedAdminMembersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/finances': {
+      id: '/_authenticated/_admin/finances'
+      path: '/finances'
+      fullPath: '/finances'
+      preLoaderRoute: typeof AuthenticatedAdminFinancesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/dashboard': {
+      id: '/_authenticated/_admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/classes': {
+      id: '/_authenticated/_admin/classes'
+      path: '/classes'
+      fullPath: '/classes'
+      preLoaderRoute: typeof AuthenticatedAdminClassesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/attendance': {
+      id: '/_authenticated/_admin/attendance'
+      path: '/attendance'
+      fullPath: '/attendance'
+      preLoaderRoute: typeof AuthenticatedAdminAttendanceRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/more/settings': {
+      id: '/_authenticated/_admin/more/settings'
+      path: '/settings'
+      fullPath: '/more/settings'
+      preLoaderRoute: typeof AuthenticatedAdminMoreSettingsRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
+    '/_authenticated/_admin/more/reports': {
+      id: '/_authenticated/_admin/more/reports'
+      path: '/reports'
+      fullPath: '/more/reports'
+      preLoaderRoute: typeof AuthenticatedAdminMoreReportsRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
+    '/_authenticated/_admin/more/plans': {
+      id: '/_authenticated/_admin/more/plans'
+      path: '/plans'
+      fullPath: '/more/plans'
+      preLoaderRoute: typeof AuthenticatedAdminMorePlansRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
+    '/_authenticated/_admin/more/notifications': {
+      id: '/_authenticated/_admin/more/notifications'
+      path: '/notifications'
+      fullPath: '/more/notifications'
+      preLoaderRoute: typeof AuthenticatedAdminMoreNotificationsRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
+    '/_authenticated/_admin/more/files': {
+      id: '/_authenticated/_admin/more/files'
+      path: '/files'
+      fullPath: '/more/files'
+      preLoaderRoute: typeof AuthenticatedAdminMoreFilesRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
+    '/_authenticated/_admin/more/coaches': {
+      id: '/_authenticated/_admin/more/coaches'
+      path: '/coaches'
+      fullPath: '/more/coaches'
+      preLoaderRoute: typeof AuthenticatedAdminMoreCoachesRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
+    '/_authenticated/_admin/members/$id': {
+      id: '/_authenticated/_admin/members/$id'
+      path: '/$id'
+      fullPath: '/members/$id'
+      preLoaderRoute: typeof AuthenticatedAdminMembersIdRouteImport
+      parentRoute: typeof AuthenticatedAdminMembersRoute
+    }
+    '/_authenticated/_admin/classes/$id': {
+      id: '/_authenticated/_admin/classes/$id'
+      path: '/$id'
+      fullPath: '/classes/$id'
+      preLoaderRoute: typeof AuthenticatedAdminClassesIdRouteImport
+      parentRoute: typeof AuthenticatedAdminClassesRoute
+    }
   }
 }
 
+interface AuthenticatedAdminClassesRouteChildren {
+  AuthenticatedAdminClassesIdRoute: typeof AuthenticatedAdminClassesIdRoute
+}
+
+const AuthenticatedAdminClassesRouteChildren: AuthenticatedAdminClassesRouteChildren =
+  {
+    AuthenticatedAdminClassesIdRoute: AuthenticatedAdminClassesIdRoute,
+  }
+
+const AuthenticatedAdminClassesRouteWithChildren =
+  AuthenticatedAdminClassesRoute._addFileChildren(
+    AuthenticatedAdminClassesRouteChildren,
+  )
+
+interface AuthenticatedAdminMembersRouteChildren {
+  AuthenticatedAdminMembersIdRoute: typeof AuthenticatedAdminMembersIdRoute
+}
+
+const AuthenticatedAdminMembersRouteChildren: AuthenticatedAdminMembersRouteChildren =
+  {
+    AuthenticatedAdminMembersIdRoute: AuthenticatedAdminMembersIdRoute,
+  }
+
+const AuthenticatedAdminMembersRouteWithChildren =
+  AuthenticatedAdminMembersRoute._addFileChildren(
+    AuthenticatedAdminMembersRouteChildren,
+  )
+
+interface AuthenticatedAdminMoreRouteChildren {
+  AuthenticatedAdminMoreCoachesRoute: typeof AuthenticatedAdminMoreCoachesRoute
+  AuthenticatedAdminMoreFilesRoute: typeof AuthenticatedAdminMoreFilesRoute
+  AuthenticatedAdminMoreNotificationsRoute: typeof AuthenticatedAdminMoreNotificationsRoute
+  AuthenticatedAdminMorePlansRoute: typeof AuthenticatedAdminMorePlansRoute
+  AuthenticatedAdminMoreReportsRoute: typeof AuthenticatedAdminMoreReportsRoute
+  AuthenticatedAdminMoreSettingsRoute: typeof AuthenticatedAdminMoreSettingsRoute
+}
+
+const AuthenticatedAdminMoreRouteChildren: AuthenticatedAdminMoreRouteChildren =
+  {
+    AuthenticatedAdminMoreCoachesRoute: AuthenticatedAdminMoreCoachesRoute,
+    AuthenticatedAdminMoreFilesRoute: AuthenticatedAdminMoreFilesRoute,
+    AuthenticatedAdminMoreNotificationsRoute:
+      AuthenticatedAdminMoreNotificationsRoute,
+    AuthenticatedAdminMorePlansRoute: AuthenticatedAdminMorePlansRoute,
+    AuthenticatedAdminMoreReportsRoute: AuthenticatedAdminMoreReportsRoute,
+    AuthenticatedAdminMoreSettingsRoute: AuthenticatedAdminMoreSettingsRoute,
+  }
+
+const AuthenticatedAdminMoreRouteWithChildren =
+  AuthenticatedAdminMoreRoute._addFileChildren(
+    AuthenticatedAdminMoreRouteChildren,
+  )
+
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminAttendanceRoute: typeof AuthenticatedAdminAttendanceRoute
+  AuthenticatedAdminClassesRoute: typeof AuthenticatedAdminClassesRouteWithChildren
+  AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
+  AuthenticatedAdminFinancesRoute: typeof AuthenticatedAdminFinancesRoute
+  AuthenticatedAdminMembersRoute: typeof AuthenticatedAdminMembersRouteWithChildren
+  AuthenticatedAdminMoreRoute: typeof AuthenticatedAdminMoreRouteWithChildren
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminAttendanceRoute: AuthenticatedAdminAttendanceRoute,
+  AuthenticatedAdminClassesRoute: AuthenticatedAdminClassesRouteWithChildren,
+  AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
+  AuthenticatedAdminFinancesRoute: AuthenticatedAdminFinancesRoute,
+  AuthenticatedAdminMembersRoute: AuthenticatedAdminMembersRouteWithChildren,
+  AuthenticatedAdminMoreRoute: AuthenticatedAdminMoreRouteWithChildren,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
