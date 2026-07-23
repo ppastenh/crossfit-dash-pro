@@ -19,6 +19,12 @@ import { Route as AuthenticatedAdminFinancesRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/_admin/dashboard'
 import { Route as AuthenticatedAdminClassesRouteImport } from './routes/_authenticated/_admin/classes'
 import { Route as AuthenticatedAdminAttendanceRouteImport } from './routes/_authenticated/_admin/attendance'
+import { Route as AuthenticatedAdminMoreSettingsRouteImport } from './routes/_authenticated/_admin/more/settings'
+import { Route as AuthenticatedAdminMoreReportsRouteImport } from './routes/_authenticated/_admin/more/reports'
+import { Route as AuthenticatedAdminMorePlansRouteImport } from './routes/_authenticated/_admin/more/plans'
+import { Route as AuthenticatedAdminMoreNotificationsRouteImport } from './routes/_authenticated/_admin/more/notifications'
+import { Route as AuthenticatedAdminMoreFilesRouteImport } from './routes/_authenticated/_admin/more/files'
+import { Route as AuthenticatedAdminMoreCoachesRouteImport } from './routes/_authenticated/_admin/more/coaches'
 import { Route as AuthenticatedAdminMembersIdRouteImport } from './routes/_authenticated/_admin/members.$id'
 import { Route as AuthenticatedAdminClassesIdRouteImport } from './routes/_authenticated/_admin/classes.$id'
 
@@ -75,6 +81,42 @@ const AuthenticatedAdminAttendanceRoute =
     path: '/attendance',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminMoreSettingsRoute =
+  AuthenticatedAdminMoreSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
+const AuthenticatedAdminMoreReportsRoute =
+  AuthenticatedAdminMoreReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
+const AuthenticatedAdminMorePlansRoute =
+  AuthenticatedAdminMorePlansRouteImport.update({
+    id: '/plans',
+    path: '/plans',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
+const AuthenticatedAdminMoreNotificationsRoute =
+  AuthenticatedAdminMoreNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
+const AuthenticatedAdminMoreFilesRoute =
+  AuthenticatedAdminMoreFilesRouteImport.update({
+    id: '/files',
+    path: '/files',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
+const AuthenticatedAdminMoreCoachesRoute =
+  AuthenticatedAdminMoreCoachesRouteImport.update({
+    id: '/coaches',
+    path: '/coaches',
+    getParentRoute: () => AuthenticatedAdminMoreRoute,
+  } as any)
 const AuthenticatedAdminMembersIdRoute =
   AuthenticatedAdminMembersIdRouteImport.update({
     id: '/$id',
@@ -96,9 +138,15 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/finances': typeof AuthenticatedAdminFinancesRoute
   '/members': typeof AuthenticatedAdminMembersRouteWithChildren
-  '/more': typeof AuthenticatedAdminMoreRoute
+  '/more': typeof AuthenticatedAdminMoreRouteWithChildren
   '/classes/$id': typeof AuthenticatedAdminClassesIdRoute
   '/members/$id': typeof AuthenticatedAdminMembersIdRoute
+  '/more/coaches': typeof AuthenticatedAdminMoreCoachesRoute
+  '/more/files': typeof AuthenticatedAdminMoreFilesRoute
+  '/more/notifications': typeof AuthenticatedAdminMoreNotificationsRoute
+  '/more/plans': typeof AuthenticatedAdminMorePlansRoute
+  '/more/reports': typeof AuthenticatedAdminMoreReportsRoute
+  '/more/settings': typeof AuthenticatedAdminMoreSettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -108,9 +156,15 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/finances': typeof AuthenticatedAdminFinancesRoute
   '/members': typeof AuthenticatedAdminMembersRouteWithChildren
-  '/more': typeof AuthenticatedAdminMoreRoute
+  '/more': typeof AuthenticatedAdminMoreRouteWithChildren
   '/classes/$id': typeof AuthenticatedAdminClassesIdRoute
   '/members/$id': typeof AuthenticatedAdminMembersIdRoute
+  '/more/coaches': typeof AuthenticatedAdminMoreCoachesRoute
+  '/more/files': typeof AuthenticatedAdminMoreFilesRoute
+  '/more/notifications': typeof AuthenticatedAdminMoreNotificationsRoute
+  '/more/plans': typeof AuthenticatedAdminMorePlansRoute
+  '/more/reports': typeof AuthenticatedAdminMoreReportsRoute
+  '/more/settings': typeof AuthenticatedAdminMoreSettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -123,9 +177,15 @@ export interface FileRoutesById {
   '/_authenticated/_admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/_admin/finances': typeof AuthenticatedAdminFinancesRoute
   '/_authenticated/_admin/members': typeof AuthenticatedAdminMembersRouteWithChildren
-  '/_authenticated/_admin/more': typeof AuthenticatedAdminMoreRoute
+  '/_authenticated/_admin/more': typeof AuthenticatedAdminMoreRouteWithChildren
   '/_authenticated/_admin/classes/$id': typeof AuthenticatedAdminClassesIdRoute
   '/_authenticated/_admin/members/$id': typeof AuthenticatedAdminMembersIdRoute
+  '/_authenticated/_admin/more/coaches': typeof AuthenticatedAdminMoreCoachesRoute
+  '/_authenticated/_admin/more/files': typeof AuthenticatedAdminMoreFilesRoute
+  '/_authenticated/_admin/more/notifications': typeof AuthenticatedAdminMoreNotificationsRoute
+  '/_authenticated/_admin/more/plans': typeof AuthenticatedAdminMorePlansRoute
+  '/_authenticated/_admin/more/reports': typeof AuthenticatedAdminMoreReportsRoute
+  '/_authenticated/_admin/more/settings': typeof AuthenticatedAdminMoreSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -140,6 +200,12 @@ export interface FileRouteTypes {
     | '/more'
     | '/classes/$id'
     | '/members/$id'
+    | '/more/coaches'
+    | '/more/files'
+    | '/more/notifications'
+    | '/more/plans'
+    | '/more/reports'
+    | '/more/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -152,6 +218,12 @@ export interface FileRouteTypes {
     | '/more'
     | '/classes/$id'
     | '/members/$id'
+    | '/more/coaches'
+    | '/more/files'
+    | '/more/notifications'
+    | '/more/plans'
+    | '/more/reports'
+    | '/more/settings'
   id:
     | '__root__'
     | '/'
@@ -166,6 +238,12 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin/more'
     | '/_authenticated/_admin/classes/$id'
     | '/_authenticated/_admin/members/$id'
+    | '/_authenticated/_admin/more/coaches'
+    | '/_authenticated/_admin/more/files'
+    | '/_authenticated/_admin/more/notifications'
+    | '/_authenticated/_admin/more/plans'
+    | '/_authenticated/_admin/more/reports'
+    | '/_authenticated/_admin/more/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -246,6 +324,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAttendanceRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/_admin/more/settings': {
+      id: '/_authenticated/_admin/more/settings'
+      path: '/settings'
+      fullPath: '/more/settings'
+      preLoaderRoute: typeof AuthenticatedAdminMoreSettingsRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
+    '/_authenticated/_admin/more/reports': {
+      id: '/_authenticated/_admin/more/reports'
+      path: '/reports'
+      fullPath: '/more/reports'
+      preLoaderRoute: typeof AuthenticatedAdminMoreReportsRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
+    '/_authenticated/_admin/more/plans': {
+      id: '/_authenticated/_admin/more/plans'
+      path: '/plans'
+      fullPath: '/more/plans'
+      preLoaderRoute: typeof AuthenticatedAdminMorePlansRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
+    '/_authenticated/_admin/more/notifications': {
+      id: '/_authenticated/_admin/more/notifications'
+      path: '/notifications'
+      fullPath: '/more/notifications'
+      preLoaderRoute: typeof AuthenticatedAdminMoreNotificationsRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
+    '/_authenticated/_admin/more/files': {
+      id: '/_authenticated/_admin/more/files'
+      path: '/files'
+      fullPath: '/more/files'
+      preLoaderRoute: typeof AuthenticatedAdminMoreFilesRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
+    '/_authenticated/_admin/more/coaches': {
+      id: '/_authenticated/_admin/more/coaches'
+      path: '/coaches'
+      fullPath: '/more/coaches'
+      preLoaderRoute: typeof AuthenticatedAdminMoreCoachesRouteImport
+      parentRoute: typeof AuthenticatedAdminMoreRoute
+    }
     '/_authenticated/_admin/members/$id': {
       id: '/_authenticated/_admin/members/$id'
       path: '/$id'
@@ -291,13 +411,38 @@ const AuthenticatedAdminMembersRouteWithChildren =
     AuthenticatedAdminMembersRouteChildren,
   )
 
+interface AuthenticatedAdminMoreRouteChildren {
+  AuthenticatedAdminMoreCoachesRoute: typeof AuthenticatedAdminMoreCoachesRoute
+  AuthenticatedAdminMoreFilesRoute: typeof AuthenticatedAdminMoreFilesRoute
+  AuthenticatedAdminMoreNotificationsRoute: typeof AuthenticatedAdminMoreNotificationsRoute
+  AuthenticatedAdminMorePlansRoute: typeof AuthenticatedAdminMorePlansRoute
+  AuthenticatedAdminMoreReportsRoute: typeof AuthenticatedAdminMoreReportsRoute
+  AuthenticatedAdminMoreSettingsRoute: typeof AuthenticatedAdminMoreSettingsRoute
+}
+
+const AuthenticatedAdminMoreRouteChildren: AuthenticatedAdminMoreRouteChildren =
+  {
+    AuthenticatedAdminMoreCoachesRoute: AuthenticatedAdminMoreCoachesRoute,
+    AuthenticatedAdminMoreFilesRoute: AuthenticatedAdminMoreFilesRoute,
+    AuthenticatedAdminMoreNotificationsRoute:
+      AuthenticatedAdminMoreNotificationsRoute,
+    AuthenticatedAdminMorePlansRoute: AuthenticatedAdminMorePlansRoute,
+    AuthenticatedAdminMoreReportsRoute: AuthenticatedAdminMoreReportsRoute,
+    AuthenticatedAdminMoreSettingsRoute: AuthenticatedAdminMoreSettingsRoute,
+  }
+
+const AuthenticatedAdminMoreRouteWithChildren =
+  AuthenticatedAdminMoreRoute._addFileChildren(
+    AuthenticatedAdminMoreRouteChildren,
+  )
+
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAttendanceRoute: typeof AuthenticatedAdminAttendanceRoute
   AuthenticatedAdminClassesRoute: typeof AuthenticatedAdminClassesRouteWithChildren
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminFinancesRoute: typeof AuthenticatedAdminFinancesRoute
   AuthenticatedAdminMembersRoute: typeof AuthenticatedAdminMembersRouteWithChildren
-  AuthenticatedAdminMoreRoute: typeof AuthenticatedAdminMoreRoute
+  AuthenticatedAdminMoreRoute: typeof AuthenticatedAdminMoreRouteWithChildren
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -306,7 +451,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
   AuthenticatedAdminFinancesRoute: AuthenticatedAdminFinancesRoute,
   AuthenticatedAdminMembersRoute: AuthenticatedAdminMembersRouteWithChildren,
-  AuthenticatedAdminMoreRoute: AuthenticatedAdminMoreRoute,
+  AuthenticatedAdminMoreRoute: AuthenticatedAdminMoreRouteWithChildren,
 }
 
 const AuthenticatedAdminRouteWithChildren =
