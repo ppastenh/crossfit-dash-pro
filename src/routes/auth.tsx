@@ -32,10 +32,12 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const { invite } = Route.useSearch();
+  const [mode, setMode] = useState<"signin" | "signup">(invite ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [inviteCode, setInviteCode] = useState(invite ?? "");
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -43,15 +45,23 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
+        const trimmedInvite = inviteCode.trim();
         const { error } = await supabase.auth.signUp({
           email, password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            data: { full_name: name },
+            data: {
+              full_name: name,
+              ...(trimmedInvite ? { invite_code: trimmedInvite } : {}),
+            },
           },
         });
         if (error) throw error;
-        toast.success("Cuenta creada. Revisa tu correo si tu proyecto lo requiere.");
+        toast.success(
+          trimmedInvite
+            ? "Cuenta creada con invitación. Revisa tu correo si tu proyecto lo requiere."
+            : "Cuenta creada. Revisa tu correo si tu proyecto lo requiere.",
+        );
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
