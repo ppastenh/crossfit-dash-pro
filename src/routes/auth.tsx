@@ -114,13 +114,29 @@ function AuthPage() {
           <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} />
         </div>
 
+        {mode === "signup" && (
+          <div className="space-y-2">
+            <Label htmlFor="invite" className="flex items-center gap-1.5">
+              <Ticket className="h-3.5 w-3.5" /> Código de invitación
+              <span className="text-[10px] font-normal text-muted-foreground">(opcional)</span>
+            </Label>
+            <Input
+              id="invite"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              placeholder="Ej. ABCD23XYZ7"
+              autoComplete="off"
+            />
+          </div>
+        )}
+
         <Button type="submit" disabled={loading} className="w-full rounded-full h-12 font-semibold">
           {loading ? "Cargando..." : mode === "signin" ? "Ingresar" : "Crear cuenta"}
         </Button>
 
         {mode === "signup" && (
           <p className="text-center text-xs text-muted-foreground">
-            El primer usuario se convierte automáticamente en administrador.
+            Con código de invitación válido tu cuenta será administrador. Sin código, el primer usuario del sistema se convierte en admin automáticamente.
           </p>
         )}
       </form>
