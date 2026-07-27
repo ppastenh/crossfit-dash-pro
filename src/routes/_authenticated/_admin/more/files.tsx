@@ -71,39 +71,50 @@ function FilesPage() {
   };
 
   return (
-    <AdminShell title="Archivos" showBack right={
-      <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <AdminShell title="Archivos" showBack right={
         <DialogTrigger asChild>
-          <button className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground">
+          <button aria-label="Subir archivo" className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground">
             <Plus className="h-4 w-4" />
           </button>
         </DialogTrigger>
-        <UploadDialog onDone={() => { setOpen(false); invalidate(); }} />
-      </Dialog>
-    }>
-      <div className="mb-4 rounded-2xl border bg-card p-4">
-        <p className="text-xs text-muted-foreground">Contratos generales</p>
-        <p className="mt-1 text-sm">Los archivos aquí se muestran a todos los atletas en <span className="font-semibold">Contratos Activos</span>. Al reemplazar un archivo, se resetea la aceptación y se bloquea el agendamiento hasta que lo acepten.</p>
-      </div>
-
-      {isLoading ? (
-        <p className="text-center text-xs text-muted-foreground">Cargando…</p>
-      ) : contracts.length === 0 ? (
-        <div className="flex flex-col items-center rounded-3xl border border-dashed p-10 text-center">
-          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-secondary text-muted-foreground">
-            <Upload className="h-6 w-6" />
-          </div>
-          <h2 className="mt-4 text-lg font-bold">Sin archivos</h2>
-          <p className="mt-2 max-w-xs text-xs text-muted-foreground">Sube tu primer contrato para que aparezca en la app de los atletas.</p>
+      }>
+        <div className="mb-4 rounded-2xl border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Contratos generales</p>
+          <p className="mt-1 text-sm">Los archivos aquí se muestran a todos los atletas en <span className="font-semibold">Contratos Activos</span>. Al reemplazar un archivo, se resetea la aceptación y se bloquea el agendamiento hasta que lo acepten.</p>
         </div>
-      ) : (
-        <ul className="space-y-3">
-          {contracts.map((c) => (
-            <ContractRow key={c.id} contract={c} accepted={stats?.byContract.get(c.id) ?? 0} total={stats?.totalMembers ?? 0} onChange={invalidate} />
-          ))}
-        </ul>
-      )}
-    </AdminShell>
+
+        <DialogTrigger asChild>
+          <button className="mb-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground active:opacity-90">
+            <Upload className="h-4 w-4" /> Subir contrato
+          </button>
+        </DialogTrigger>
+
+        {isLoading ? (
+          <p className="text-center text-xs text-muted-foreground">Cargando…</p>
+        ) : contracts.length === 0 ? (
+          <div className="flex flex-col items-center rounded-3xl border border-dashed p-10 text-center">
+            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-secondary text-muted-foreground">
+              <Upload className="h-6 w-6" />
+            </div>
+            <h2 className="mt-4 text-lg font-bold">Sin archivos</h2>
+            <p className="mt-2 max-w-xs text-xs text-muted-foreground">Sube tu primer contrato para que aparezca en la app de los atletas.</p>
+            <DialogTrigger asChild>
+              <button className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground active:opacity-90">
+                <Upload className="h-4 w-4" /> Subir archivo
+              </button>
+            </DialogTrigger>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {contracts.map((c) => (
+              <ContractRow key={c.id} contract={c} accepted={stats?.byContract.get(c.id) ?? 0} total={stats?.totalMembers ?? 0} onChange={invalidate} />
+            ))}
+          </ul>
+        )}
+      </AdminShell>
+      <UploadDialog onDone={() => { setOpen(false); invalidate(); }} />
+    </Dialog>
   );
 }
 
