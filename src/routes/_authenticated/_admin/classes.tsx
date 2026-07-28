@@ -91,6 +91,7 @@ function AddClassFab() {
     name: "",
     class_date: format(new Date(), "yyyy-MM-dd"),
     start_time: "07:00",
+    duration_minutes: 60,
     capacity: 15,
     level: "todos" as string,
     coach_id: "",
@@ -103,6 +104,7 @@ function AddClassFab() {
     mutationFn: async () => {
       const { error } = await supabase.from("classes").insert({
         name: form.name, class_date: form.class_date, start_time: form.start_time,
+        duration_minutes: form.duration_minutes,
         capacity: form.capacity, level: form.level as "todos", coach_id: form.coach_id || null,
       });
       if (error) throw error;
@@ -127,19 +129,20 @@ function AddClassFab() {
             <div><Label>Hora</Label><Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-2 gap-2">
+            <div><Label>Duración (min)</Label><Input type="number" min={5} step={5} value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: Number(e.target.value) })} /></div>
             <div><Label>Cupos</Label><Input type="number" min={1} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })} /></div>
-            <div>
-              <Label>Nivel</Label>
-              <Select value={form.level} onValueChange={(v) => setForm({ ...form, level: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="principiante">Principiante</SelectItem>
-                  <SelectItem value="intermedio">Intermedio</SelectItem>
-                  <SelectItem value="avanzado">Avanzado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          </div>
+          <div>
+            <Label>Nivel</Label>
+            <Select value={form.level} onValueChange={(v) => setForm({ ...form, level: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="principiante">Principiante</SelectItem>
+                <SelectItem value="intermedio">Intermedio</SelectItem>
+                <SelectItem value="avanzado">Avanzado</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Coach</Label>
