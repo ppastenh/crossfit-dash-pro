@@ -181,3 +181,194 @@ function AddMemberFab({ plans }: { plans: Array<{ id: string; name: string }> })
     </Dialog>
   );
 }
+
+function BoxInviteCard() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["box_settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("box_settings").select("id, invite_code").limit(1).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const regen = useMutation({
+    mutationFn: async () => {
+      const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+      let code = "";
+      for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      code += "-";
+      for (let i = 0; i < 3; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      if (!data?.id) {
+        const { error } = await supabase.from("box_settings").insert({ invite_code: code });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("box_settings").update({ invite_code: code }).eq("id", data.id);
+        if (error) throw error;
+      }
+      return code;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["box_settings"] });
+      toast.success("Código regenerado");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
+  });
+
+  const code = data?.invite_code ?? "—";
+
+  async function copy() {
+    await navigator.clipboard.writeText(code);
+    toast.success("Código copiado");
+  }
+
+  function shareWhatsapp() {
+    const text = encodeURIComponent(
+      `¡Únete al box! Usa este código de invitación: ${code}`
+    );
+    window.open(`https://wa.me/?text=${text}`, "_blank");
+  }
+
+  return (
+    <div className="mb-4 rounded-3xl border bg-gradient-to-br from-primary/15 via-card to-card p-5">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          Código de invitación
+        </p>
+        <button
+          onClick={copy}
+          className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-foreground active:bg-secondary/70"
+          aria-label="Copiar"
+        >
+          <Copy className="h-4 w-4" />
+        </button>
+      </div>
+      <button
+        onClick={copy}
+        className="mt-3 block w-full text-left font-mono text-3xl font-black tracking-[0.25em] text-primary"
+      >
+        {isLoading ? "…" : code}
+      </button>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <Button
+          onClick={() => regen.mutate()}
+          disabled={regen.isPending}
+          variant="secondary"
+          className="h-11 rounded-full font-semibold"
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${regen.isPending ? "animate-spin" : ""}`} />
+          Regenerar
+        </Button>
+        <Button
+          onClick={shareWhatsapp}
+          className="h-11 rounded-full bg-[#25D366] font-semibold text-white hover:bg-[#25D366]/90"
+        >
+          <MessageCircle className="mr-2 h-4 w-4" />
+          WhatsApp
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+type Request = {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+  created_at: string;
+};
+
+function PendingRequests() {
+  const qc = useQueryClient();
+  const { data: requests = [] } = useQuery({
+    queryKey: ["member_requests", "pendiente"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("member_requests")
+        .select("id, full_name, phone, email, created_at")
+        .eq("status", "pendiente")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as Request[];
+    },
+  });
+
+  const approve = useMutation({
+    mutationFn: async (r: Request) => {
+      const { error: insErr } = await supabase.from("members").insert({
+        full_name: r.full_name,
+        phone: r.phone,
+        email: r.email,
+      });
+      if (insErr) throw insErr;
+      const { error } = await supabase
+        .from("member_requests")
+        .update({ status: "aprobado" })
+        .eq("id", r.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["member_requests"] });
+      qc.invalidateQueries({ queryKey: ["members"] });
+      toast.success("Solicitud aprobada");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
+  });
+
+  const reject = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("member_requests")
+        .update({ status: "rechazado" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["member_requests"] });
+      toast.success("Solicitud rechazada");
+    },
+  });
+
+  if (requests.length === 0) return null;
+
+  return (
+    <div className="mb-4 rounded-3xl border bg-card p-4">
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        Solicitudes pendientes ({requests.length})
+      </p>
+      <div className="space-y-2">
+        {requests.map((r) => (
+          <div key={r.id} className="flex items-center gap-3 rounded-2xl border bg-background/40 p-3">
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-secondary text-xs font-bold">
+              {r.full_name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase() || <User className="h-4 w-4" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{r.full_name}</p>
+              {(r.phone || r.email) && (
+                <p className="truncate text-[11px] text-muted-foreground">{r.phone ?? r.email}</p>
+              )}
+            </div>
+            <button
+              onClick={() => approve.mutate(r)}
+              disabled={approve.isPending}
+              className="grid h-10 w-10 place-items-center rounded-full bg-primary/20 text-primary active:bg-primary/30 disabled:opacity-40"
+              aria-label="Aprobar"
+            >
+              <Check className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => reject.mutate(r.id)}
+              disabled={reject.isPending}
+              className="grid h-10 w-10 place-items-center rounded-full bg-destructive/15 text-destructive active:bg-destructive/25 disabled:opacity-40"
+              aria-label="Rechazar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
