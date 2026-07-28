@@ -131,7 +131,7 @@ function AddClassFab() {
   const mut = useMutation({
     mutationFn: async () => {
       const base = parseISO(form.class_date);
-      const rows: Array<Record<string, unknown>> = [];
+      const rows: Array<typeof common & { class_date: string }> = [];
       const common = {
         name: form.name,
         start_time: form.start_time,
