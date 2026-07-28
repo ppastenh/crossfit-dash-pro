@@ -76,6 +76,27 @@ export type Database = {
           },
         ]
       }
+      box_settings: {
+        Row: {
+          created_at: string
+          id: string
+          invite_code: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invite_code: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invite_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       class_attendees: {
         Row: {
           class_id: string
@@ -263,6 +284,42 @@ export type Database = {
           title?: string
           updated_at?: string
           uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      member_requests: {
+        Row: {
+          code_used: string | null
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        Insert: {
+          code_used?: string | null
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+        }
+        Update: {
+          code_used?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -496,6 +553,7 @@ export type Database = {
       class_status: "programada" | "en_curso" | "finalizada" | "cancelada"
       member_status: "activo" | "suspendido" | "vencido"
       payment_status: "pagado" | "pendiente" | "vencido"
+      request_status: "pendiente" | "aprobado" | "rechazado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -629,6 +687,7 @@ export const Constants = {
       class_status: ["programada", "en_curso", "finalizada", "cancelada"],
       member_status: ["activo", "suspendido", "vencido"],
       payment_status: ["pagado", "pendiente", "vencido"],
+      request_status: ["pendiente", "aprobado", "rechazado"],
     },
   },
 } as const
