@@ -107,25 +107,66 @@ function AddClassFab() {
     level: "todos" as string,
     coach_id: "",
   });
+  const [repeatWeekly, setRepeatWeekly] = useState(false);
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [weeksAhead, setWeeksAhead] = useState(8);
+
+  const baseDow = (() => {
+    try { return parseISO(form.class_date).getDay(); } catch { return new Date().getDay(); }
+  })();
+
+  const toggleDay = (d: number) => {
+    setSelectedDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]);
+  };
+
+  const openChange = (v: boolean) => {
+    setOpen(v);
+    if (v) setSelectedDays([baseDow]);
+  };
+
   const { data: coaches } = useQuery({
     queryKey: ["coaches"],
     queryFn: async () => (await supabase.from("coaches").select("id, full_name").order("full_name")).data ?? [],
   });
   const mut = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("classes").insert({
-        name: form.name, class_date: form.class_date, start_time: form.start_time,
+      const base = parseISO(form.class_date);
+      const rows: Array<Record<string, unknown>> = [];
+      const common = {
+        name: form.name,
+        start_time: form.start_time,
         duration_minutes: form.duration_minutes,
-        capacity: form.capacity, level: form.level as "todos", coach_id: form.coach_id || null,
-      });
+        capacity: form.capacity,
+        level: form.level as "todos",
+        coach_id: form.coach_id || null,
+      };
+      if (repeatWeekly && selectedDays.length > 0) {
+        const seen = new Set<string>();
+        for (let w = 0; w < weeksAhead; w++) {
+          for (const dow of selectedDays) {
+            const weekStart = addDays(base, w * 7);
+            const diff = (dow - weekStart.getDay() + 7) % 7;
+            const d = addDays(weekStart, diff);
+            if (d < base) continue;
+            const key = format(d, "yyyy-MM-dd");
+            if (seen.has(key)) continue;
+            seen.add(key);
+            rows.push({ ...common, class_date: key });
+          }
+        }
+      } else {
+        rows.push({ ...common, class_date: form.class_date });
+      }
+      const { error } = await supabase.from("classes").insert(rows);
       if (error) throw error;
+      return rows.length;
     },
-    onSuccess: () => { toast.success("Clase creada"); qc.invalidateQueries({ queryKey: ["classes-today"] }); setOpen(false); },
+    onSuccess: (n) => { toast.success(n > 1 ? `${n} clases creadas` : "Clase creada"); qc.invalidateQueries({ queryKey: ["classes-today"] }); setOpen(false); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={openChange}>
       <DialogTrigger asChild>
         <button className="fixed bottom-24 right-5 z-30 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30">
           <Plus className="h-6 w-6" />
