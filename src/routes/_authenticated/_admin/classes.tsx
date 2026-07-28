@@ -8,9 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, addDays, parseISO } from "date-fns";
 import { toast } from "sonner";
+
+const WEEK_DAYS = [
+  { label: "L", value: 1 },
+  { label: "M", value: 2 },
+  { label: "M", value: 3 },
+  { label: "J", value: 4 },
+  { label: "V", value: 5 },
+  { label: "S", value: 6 },
+  { label: "D", value: 0 },
+];
 
 export const Route = createFileRoute("/_authenticated/_admin/classes")({
   head: () => ({
@@ -96,25 +107,66 @@ function AddClassFab() {
     level: "todos" as string,
     coach_id: "",
   });
+  const [repeatWeekly, setRepeatWeekly] = useState(false);
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [weeksAhead, setWeeksAhead] = useState(8);
+
+  const baseDow = (() => {
+    try { return parseISO(form.class_date).getDay(); } catch { return new Date().getDay(); }
+  })();
+
+  const toggleDay = (d: number) => {
+    setSelectedDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]);
+  };
+
+  const openChange = (v: boolean) => {
+    setOpen(v);
+    if (v) setSelectedDays([baseDow]);
+  };
+
   const { data: coaches } = useQuery({
     queryKey: ["coaches"],
     queryFn: async () => (await supabase.from("coaches").select("id, full_name").order("full_name")).data ?? [],
   });
   const mut = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("classes").insert({
-        name: form.name, class_date: form.class_date, start_time: form.start_time,
+      const base = parseISO(form.class_date);
+      const rows: Array<typeof common & { class_date: string }> = [];
+      const common = {
+        name: form.name,
+        start_time: form.start_time,
         duration_minutes: form.duration_minutes,
-        capacity: form.capacity, level: form.level as "todos", coach_id: form.coach_id || null,
-      });
+        capacity: form.capacity,
+        level: form.level as "todos",
+        coach_id: form.coach_id || null,
+      };
+      if (repeatWeekly && selectedDays.length > 0) {
+        const seen = new Set<string>();
+        for (let w = 0; w < weeksAhead; w++) {
+          for (const dow of selectedDays) {
+            const weekStart = addDays(base, w * 7);
+            const diff = (dow - weekStart.getDay() + 7) % 7;
+            const d = addDays(weekStart, diff);
+            if (d < base) continue;
+            const key = format(d, "yyyy-MM-dd");
+            if (seen.has(key)) continue;
+            seen.add(key);
+            rows.push({ ...common, class_date: key });
+          }
+        }
+      } else {
+        rows.push({ ...common, class_date: form.class_date });
+      }
+      const { error } = await supabase.from("classes").insert(rows);
       if (error) throw error;
+      return rows.length;
     },
-    onSuccess: () => { toast.success("Clase creada"); qc.invalidateQueries({ queryKey: ["classes-today"] }); setOpen(false); },
+    onSuccess: (n) => { toast.success(n > 1 ? `${n} clases creadas` : "Clase creada"); qc.invalidateQueries({ queryKey: ["classes-today"] }); setOpen(false); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={openChange}>
       <DialogTrigger asChild>
         <button className="fixed bottom-24 right-5 z-30 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30">
           <Plus className="h-6 w-6" />
@@ -152,6 +204,42 @@ function AddClassFab() {
                 {(coaches ?? []).map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
               </SelectContent>
             </Select>
+          </div>
+          <div className="rounded-2xl border p-3 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <Label className="text-sm">Repetir esta clase semanalmente</Label>
+                <p className="text-xs text-muted-foreground">Crea la clase en los días elegidos</p>
+              </div>
+              <Switch checked={repeatWeekly} onCheckedChange={setRepeatWeekly} />
+            </div>
+            {repeatWeekly && (
+              <>
+                <div className="flex justify-between gap-1">
+                  {WEEK_DAYS.map((d, i) => {
+                    const active = selectedDays.includes(d.value);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => toggleDay(d.value)}
+                        className={`h-10 w-10 rounded-full text-sm font-semibold transition-colors ${
+                          active
+                            ? "bg-primary text-primary-foreground border border-primary"
+                            : "border border-border text-foreground"
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div>
+                  <Label className="text-xs">Repetir por (semanas)</Label>
+                  <Input type="number" min={1} max={52} value={weeksAhead} onChange={(e) => setWeeksAhead(Math.max(1, Number(e.target.value)))} />
+                </div>
+              </>
+            )}
           </div>
           <Button type="submit" disabled={mut.isPending} className="w-full rounded-full h-11 font-semibold">
             {mut.isPending ? "Guardando..." : "Crear clase"}
