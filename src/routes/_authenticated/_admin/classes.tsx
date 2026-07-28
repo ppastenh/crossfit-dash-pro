@@ -8,9 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, addDays, parseISO } from "date-fns";
 import { toast } from "sonner";
+
+const WEEK_DAYS = [
+  { label: "L", value: 1 },
+  { label: "M", value: 2 },
+  { label: "M", value: 3 },
+  { label: "J", value: 4 },
+  { label: "V", value: 5 },
+  { label: "S", value: 6 },
+  { label: "D", value: 0 },
+];
 
 export const Route = createFileRoute("/_authenticated/_admin/classes")({
   head: () => ({
