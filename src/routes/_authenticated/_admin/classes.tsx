@@ -205,6 +205,42 @@ function AddClassFab() {
               </SelectContent>
             </Select>
           </div>
+          <div className="rounded-2xl border p-3 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <Label className="text-sm">Repetir esta clase semanalmente</Label>
+                <p className="text-xs text-muted-foreground">Crea la clase en los días elegidos</p>
+              </div>
+              <Switch checked={repeatWeekly} onCheckedChange={setRepeatWeekly} />
+            </div>
+            {repeatWeekly && (
+              <>
+                <div className="flex justify-between gap-1">
+                  {WEEK_DAYS.map((d, i) => {
+                    const active = selectedDays.includes(d.value);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => toggleDay(d.value)}
+                        className={`h-10 w-10 rounded-full text-sm font-semibold transition-colors ${
+                          active
+                            ? "bg-primary text-primary-foreground border border-primary"
+                            : "border border-border text-foreground"
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div>
+                  <Label className="text-xs">Repetir por (semanas)</Label>
+                  <Input type="number" min={1} max={52} value={weeksAhead} onChange={(e) => setWeeksAhead(Math.max(1, Number(e.target.value)))} />
+                </div>
+              </>
+            )}
+          </div>
           <Button type="submit" disabled={mut.isPending} className="w-full rounded-full h-11 font-semibold">
             {mut.isPending ? "Guardando..." : "Crear clase"}
           </Button>
