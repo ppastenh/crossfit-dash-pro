@@ -68,7 +68,7 @@ function MembersPage() {
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar miembro..." className="pl-9 rounded-full h-11 bg-card" />
         </div>
         <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
-          {(["todos", "activo", "suspendido", "vencido"] as Status[]).map((s) => (
+          {(["todos", "activo", "pausado", "suspendido", "vencido", "bloqueado"] as Status[]).map((s) => (
             <button key={s} onClick={() => setStatus(s)}
               className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold capitalize ${status === s ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground border"}`}>
               {s}
