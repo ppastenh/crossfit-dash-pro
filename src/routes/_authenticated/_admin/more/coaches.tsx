@@ -92,7 +92,7 @@ function CoachCard({ coach }: { coach: Coach }) {
   const paused = coach.status === "pausado";
 
   const update = useMutation({
-    mutationFn: async (patch: Record<string, unknown>) => {
+    mutationFn: async (patch: { status?: string }) => {
       const { error } = await supabase.from("coaches").update(patch).eq("id", coach.id);
       if (error) throw error;
     },
