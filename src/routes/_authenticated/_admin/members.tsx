@@ -73,25 +73,10 @@ function MembersPage() {
           </div>
         )}
         {members.data?.map((m) => (
-          <Link key={m.id} to="/members/$id" params={{ id: m.id }}
-            className="flex items-center gap-3 rounded-2xl border bg-card p-3 active:scale-[0.99] transition-transform">
-            <Avatar name={m.full_name} url={m.photo_url} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{m.full_name}</p>
-              <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-                <StatusChip status={m.status} />
-                {m.plan?.name && <span className="truncate">· {m.plan.name}</span>}
-              </div>
-            </div>
-            {m.next_payment && (
-              <div className="text-right text-[10px] text-muted-foreground">
-                <p className="font-semibold text-foreground">{format(new Date(m.next_payment), "dd MMM")}</p>
-                <p>próximo pago</p>
-              </div>
-            )}
-          </Link>
+          <MemberRow key={m.id} m={m as MemberListItem} />
         ))}
       </div>
+
 
       <AddMemberFab plans={plans ?? []} />
     </AdminShell>
