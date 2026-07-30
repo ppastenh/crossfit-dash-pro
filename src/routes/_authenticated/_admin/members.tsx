@@ -109,11 +109,219 @@ export function Avatar({ name, url, size = 44 }: { name: string; url?: string | 
 export function StatusChip({ status }: { status: string }) {
   const map: Record<string, string> = {
     activo: "bg-primary/20 text-primary",
+    pausado: "bg-sky-500/20 text-sky-400",
     suspendido: "bg-warning/20 text-warning",
     vencido: "bg-destructive/20 text-destructive",
+    bloqueado: "bg-destructive/25 text-destructive",
   };
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${map[status] ?? "bg-secondary"}`}>{status}</span>;
 }
+
+function MemberRow({ m }: { m: MemberListItem }) {
+  const [expanded, setExpanded] = useState(false);
+  const [sheet, setSheet] = useState(false);
+
+  const waHref = m.phone
+    ? `https://wa.me/${m.phone.replace(/\D/g, "")}`
+    : `https://wa.me/`;
+
+  return (
+    <div className="rounded-2xl border bg-card">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center gap-3 p-3 text-left active:scale-[0.99] transition-transform"
+      >
+        <Avatar name={m.full_name} url={m.photo_url} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{m.full_name}</p>
+          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+            <StatusChip status={m.status} />
+            {m.plan?.name && <span className="truncate">· {m.plan.name}</span>}
+          </div>
+        </div>
+        {!expanded && m.next_payment && (
+          <div className="text-right text-[10px] text-muted-foreground">
+            <p className="font-semibold text-foreground">{format(new Date(m.next_payment), "dd MMM")}</p>
+            <p>próximo pago</p>
+          </div>
+        )}
+        <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </button>
+
+      {expanded && (
+        <div className="grid grid-cols-4 gap-1 border-t p-2">
+          <Link
+            to="/members/$id"
+            params={{ id: m.id }}
+            className="flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] text-muted-foreground active:bg-secondary"
+          >
+            <UserRound className="h-5 w-5" />
+            Perfil
+          </Link>
+          <Link
+            to="/classes"
+            className="flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] text-primary active:bg-secondary"
+          >
+            <CalendarDays className="h-5 w-5" />
+            Reservar
+          </Link>
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noreferrer"
+            className="flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] text-primary active:bg-secondary"
+          >
+            <MessageCircle className="h-5 w-5" />
+            Chat
+          </a>
+          <button
+            onClick={() => setSheet(true)}
+            className="flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] text-muted-foreground active:bg-secondary"
+          >
+            <MoreVertical className="h-5 w-5" />
+            Más
+          </button>
+        </div>
+      )}
+
+      <MemberActionsSheet m={m} open={sheet} onOpenChange={setSheet} />
+    </div>
+  );
+}
+
+function ActionItem({
+  icon: Icon,
+  title,
+  subtitle,
+  tone = "default",
+  onClick,
+  to,
+  params,
+}: {
+  icon: typeof UserRound;
+  title: string;
+  subtitle?: string;
+  tone?: "default" | "primary" | "warning" | "destructive";
+  onClick?: () => void;
+  to?: string;
+  params?: Record<string, string>;
+}) {
+  const toneCls =
+    tone === "primary" ? "text-primary"
+      : tone === "warning" ? "text-warning"
+        : tone === "destructive" ? "text-destructive"
+          : "text-foreground";
+  const inner = (
+    <>
+      <Icon className={`h-5 w-5 shrink-0 ${toneCls}`} />
+      <div className="min-w-0 flex-1">
+        <p className={`text-sm font-semibold ${toneCls}`}>{title}</p>
+        {subtitle && <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>}
+      </div>
+    </>
+  );
+  const cls = "flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left active:bg-secondary";
+  if (to) {
+    return (
+      <Link to={to} params={params} className={cls}>
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <button onClick={onClick} className={cls}>
+      {inner}
+    </button>
+  );
+}
+
+function MemberActionsSheet({
+  m,
+  open,
+  onOpenChange,
+}: {
+  m: MemberListItem;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const qc = useQueryClient();
+
+  const setStatus = useMutation({
+    mutationFn: async (status: MemberStatus) => {
+      const { error } = await supabase.from("members").update({ status }).eq("id", m.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["members"] });
+      qc.invalidateQueries({ queryKey: ["member", m.id] });
+      toast.success("Estado actualizado");
+      onOpenChange(false);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
+  });
+
+  const remove = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("members").delete().eq("id", m.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["members"] });
+      toast.success("Miembro eliminado");
+      onOpenChange(false);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
+  });
+
+  async function resetPassword() {
+    if (!m.email) return toast.error("El miembro no tiene email registrado");
+    const { error } = await supabase.auth.resetPasswordForEmail(m.email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    if (error) return toast.error(error.message);
+    toast.success("Correo de restablecimiento enviado");
+  }
+
+  const isPaused = m.status === "pausado";
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="max-h-[85vh]">
+        <DrawerHeader className="pb-2 text-left">
+          <DrawerTitle className="text-base">Más acciones</DrawerTitle>
+        </DrawerHeader>
+        <div className="overflow-y-auto px-3 pb-8">
+          <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Administración</p>
+          <ActionItem icon={UserRound} title="Ver perfil" subtitle="Información completa del miembro" to="/members/$id" params={{ id: m.id }} />
+          <ActionItem icon={Pencil} title="Editar información" subtitle="Datos personales y de contacto" to="/members/$id" params={{ id: m.id }} />
+
+          <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Estado del miembro</p>
+          <ActionItem icon={CircleCheck} title="Activar miembro" subtitle="El miembro podrá acceder normalmente" tone="primary" onClick={() => setStatus.mutate("activo")} />
+          {isPaused ? (
+            <ActionItem icon={PlayCircle} title="Reanudar membresía" subtitle="Vuelve a quedar activa desde hoy" tone="primary" onClick={() => setStatus.mutate("activo")} />
+          ) : (
+            <ActionItem icon={PauseCircle} title="Pausar membresía" subtitle="Congela la membresía temporalmente" tone="warning" onClick={() => setStatus.mutate("pausado")} />
+          )}
+          <ActionItem icon={AlertCircle} title="Suspender miembro" subtitle="Acceso temporalmente restringido" tone="warning" onClick={() => setStatus.mutate("suspendido")} />
+          <ActionItem icon={Lock} title="Bloquear miembro" subtitle="El miembro no podrá iniciar sesión" tone="destructive" onClick={() => setStatus.mutate("bloqueado")} />
+          <ActionItem icon={Clock} title="Marcar como vencido" subtitle="Membresía finalizada" tone="destructive" onClick={() => setStatus.mutate("vencido")} />
+
+          <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Cuenta</p>
+          <ActionItem icon={KeyRound} title="Restablecer contraseña" subtitle="Enviar nueva contraseña al miembro" onClick={resetPassword} />
+          <ActionItem icon={Receipt} title="Ver pagos y facturas" subtitle="Historial de pagos y facturación" to="/members/$id" params={{ id: m.id }} />
+          <ActionItem
+            icon={Trash2}
+            title="Eliminar miembro"
+            subtitle="Eliminar miembro permanentemente"
+            tone="destructive"
+            onClick={() => { if (confirm(`¿Eliminar a ${m.full_name}?`)) remove.mutate(); }}
+          />
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
 
 function SkeletonList() {
   return (
