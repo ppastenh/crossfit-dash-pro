@@ -29,6 +29,7 @@ type Invite = {
   expires_at: string | null;
   used_at: string | null;
   created_at: string;
+  role: string;
 };
 
 function genCode() {
@@ -42,13 +43,14 @@ function InvitesPage() {
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [days, setDays] = useState<string>("7");
+  const [role, setRole] = useState<"admin" | "coach">("admin");
 
   const { data: invites = [], isLoading } = useQuery({
     queryKey: ["admin_invites"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("admin_invites")
-        .select("id, code, email, expires_at, used_at, created_at")
+        .select("id, code, email, expires_at, used_at, created_at, role")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as Invite[];
@@ -65,6 +67,7 @@ function InvitesPage() {
       const { data: userRes } = await supabase.auth.getUser();
       const { error } = await supabase.from("admin_invites").insert({
         code,
+        role,
         email: email.trim() || null,
         expires_at,
         created_by: userRes.user?.id ?? null,
@@ -105,6 +108,26 @@ function InvitesPage() {
       <div className="rounded-3xl border bg-card p-5">
         <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Nueva invitación</p>
         <div className="mt-3 space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Tipo de acceso</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["admin", "coach"] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRole(r)}
+                  className={`h-10 rounded-full border text-xs font-semibold transition-colors ${
+                    role === r ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {r === "admin" ? "Administrador" : "Coach"}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              El coach entra con los permisos que definas en la sección Coaches.
+            </p>
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="inv-email" className="text-xs">Email (opcional)</Label>
             <Input
@@ -165,6 +188,9 @@ function InvitesPage() {
                           {inv.code}
                         </code>
                         <StatusChip status={status} />
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold capitalize text-muted-foreground">
+                          {inv.role === "coach" ? "Coach" : "Admin"}
+                        </span>
                       </div>
                       <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
                         {inv.email && (
