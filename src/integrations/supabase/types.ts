@@ -22,6 +22,7 @@ export type Database = {
           email: string | null
           expires_at: string | null
           id: string
+          role: string
           used_at: string | null
           used_by: string | null
         }
@@ -32,6 +33,7 @@ export type Database = {
           email?: string | null
           expires_at?: string | null
           id?: string
+          role?: string
           used_at?: string | null
           used_by?: string | null
         }
@@ -42,6 +44,7 @@ export type Database = {
           email?: string | null
           expires_at?: string | null
           id?: string
+          role?: string
           used_at?: string | null
           used_by?: string | null
         }
@@ -195,30 +198,39 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          permissions: Json
           phone: string | null
           photo_url: string | null
           specialty: string | null
+          status: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           email?: string | null
           full_name: string
           id?: string
+          permissions?: Json
           phone?: string | null
           photo_url?: string | null
           specialty?: string | null
+          status?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           email?: string | null
           full_name?: string
           id?: string
+          permissions?: Json
           phone?: string | null
           photo_url?: string | null
           specialty?: string | null
+          status?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -547,7 +559,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "coach"
       attendee_status: "inscrito" | "asistio" | "ausente" | "lista_espera"
       class_level: "principiante" | "intermedio" | "avanzado" | "todos"
       class_status: "programada" | "en_curso" | "finalizada" | "cancelada"
@@ -686,7 +698,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "coach"],
       attendee_status: ["inscrito", "asistio", "ausente", "lista_espera"],
       class_level: ["principiante", "intermedio", "avanzado", "todos"],
       class_status: ["programada", "en_curso", "finalizada", "cancelada"],
