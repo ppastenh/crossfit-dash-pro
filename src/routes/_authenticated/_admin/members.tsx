@@ -24,7 +24,19 @@ export const Route = createFileRoute("/_authenticated/_admin/members")({
   component: MembersPage,
 });
 
-type Status = "todos" | "activo" | "suspendido" | "vencido";
+type Status = "todos" | "activo" | "pausado" | "suspendido" | "vencido" | "bloqueado";
+type MemberStatus = "activo" | "pausado" | "suspendido" | "vencido" | "bloqueado";
+
+export type MemberListItem = {
+  id: string;
+  full_name: string;
+  status: string;
+  next_payment: string | null;
+  photo_url: string | null;
+  phone: string | null;
+  email: string | null;
+  plan?: { name: string } | null;
+};
 
 function MembersPage() {
   const [q, setQ] = useState("");
