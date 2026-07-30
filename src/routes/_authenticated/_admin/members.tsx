@@ -38,7 +38,7 @@ function MembersPage() {
   const members = useQuery({
     queryKey: ["members", q, status],
     queryFn: async () => {
-      let query = supabase.from("members").select("id, full_name, status, next_payment, photo_url, plan:plan_id(name)").order("full_name");
+      let query = supabase.from("members").select("id, full_name, status, next_payment, photo_url, phone, email, plan:plan_id(name)").order("full_name");
       if (status !== "todos") query = query.eq("status", status);
       if (q) query = query.ilike("full_name", `%${q}%`);
       return (await query).data ?? [];
