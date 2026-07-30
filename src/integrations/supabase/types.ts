@@ -551,7 +551,12 @@ export type Database = {
       attendee_status: "inscrito" | "asistio" | "ausente" | "lista_espera"
       class_level: "principiante" | "intermedio" | "avanzado" | "todos"
       class_status: "programada" | "en_curso" | "finalizada" | "cancelada"
-      member_status: "activo" | "suspendido" | "vencido"
+      member_status:
+        | "activo"
+        | "suspendido"
+        | "vencido"
+        | "pausado"
+        | "bloqueado"
       payment_status: "pagado" | "pendiente" | "vencido"
       request_status: "pendiente" | "aprobado" | "rechazado"
     }
@@ -685,7 +690,13 @@ export const Constants = {
       attendee_status: ["inscrito", "asistio", "ausente", "lista_espera"],
       class_level: ["principiante", "intermedio", "avanzado", "todos"],
       class_status: ["programada", "en_curso", "finalizada", "cancelada"],
-      member_status: ["activo", "suspendido", "vencido"],
+      member_status: [
+        "activo",
+        "suspendido",
+        "vencido",
+        "pausado",
+        "bloqueado",
+      ],
       payment_status: ["pagado", "pendiente", "vencido"],
       request_status: ["pendiente", "aprobado", "rechazado"],
     },
