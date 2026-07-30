@@ -3,7 +3,12 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
-import { Search, Plus, User, Copy, RefreshCw, MessageCircle, Check, X } from "lucide-react";
+import {
+  Search, Plus, User, Copy, RefreshCw, MessageCircle, Check, X,
+  ChevronDown, UserRound, CalendarDays, MoreVertical, Pencil, CircleCheck,
+  PlayCircle, PauseCircle, AlertCircle, Lock, Clock, KeyRound, Receipt, Trash2,
+} from "lucide-react";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
