@@ -5,7 +5,7 @@ import { UserCog, Layers, Settings, BarChart3, Bell, FolderOpen, LogOut, Chevron
 import type { LucideIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
-export const Route = createFileRoute("/_authenticated/_admin/more")({
+export const Route = createFileRoute("/_authenticated/_admin/more/")({
   head: () => ({
     meta: [
       { title: "Más — Dlovebox" },
