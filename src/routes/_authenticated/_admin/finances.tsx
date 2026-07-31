@@ -130,7 +130,7 @@ function AddPaymentDialog() {
       });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Pago registrado"); qc.invalidateQueries(); setOpen(false); setForm({ member_id: "", amount: "", method: "efectivo", status: "pagado" }); },
+    onSuccess: () => { toast.success("Pago registrado"); qc.invalidateQueries(); setOpen(false); setQ(""); setForm({ member_id: "", plan_id: "", amount: "", method: "efectivo", status: "pagado" }); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
   });
 
