@@ -228,42 +228,116 @@ function InviteCoach({ coach }: { coach: Coach }) {
 function AddCoach({ variant }: { variant?: "cta" }) {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
-  const [f, setF] = useState({ full_name: "", email: "", phone: "", specialty: "" });
+  const [q, setQ] = useState("");
+  const [specialty, setSpecialty] = useState<Record<string, string>>({});
+
+  const members = useQuery({
+    queryKey: ["members-for-coach"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, full_name, email, phone")
+        .order("full_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: open,
+  });
+
+  const existing = useQuery({
+    queryKey: ["coaches"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("coaches").select("email, full_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: open,
+  });
+
   const mut = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("coaches").insert(f);
+    mutationFn: async (m: { id: string; full_name: string; email: string | null; phone: string | null }) => {
+      const { error } = await supabase.from("coaches").insert({
+        full_name: m.full_name,
+        email: m.email,
+        phone: m.phone,
+        specialty: specialty[m.id] || null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Coach agregado");
+      toast.success("Alumno convertido en coach");
       qc.invalidateQueries({ queryKey: ["coaches"] });
       setOpen(false);
-      setF({ full_name: "", email: "", phone: "", specialty: "" });
+      setQ("");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
   });
+
+  const taken = new Set(
+    (existing.data ?? []).flatMap((c) => [c.email?.toLowerCase(), c.full_name?.toLowerCase()].filter(Boolean) as string[]),
+  );
+
+  const list = (members.data ?? []).filter((m) =>
+    m.full_name.toLowerCase().includes(q.trim().toLowerCase()),
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {variant === "cta" ? (
-          <Button className="h-11 rounded-full px-5 font-semibold"><Plus className="mr-2 h-4 w-4" /> Agregar coach</Button>
+          <Button className="h-11 rounded-full px-5 font-semibold"><Plus className="mr-2 h-4 w-4" /> Convertir alumno en coach</Button>
         ) : (
           <button className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground"><Plus className="h-4 w-4" /></button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-sm rounded-3xl">
-        <DialogHeader><DialogTitle>Nuevo coach</DialogTitle></DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); mut.mutate(); }} className="space-y-3">
-          <div><Label>Nombre</Label><Input required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
-          <div><Label>Especialidad</Label><Input value={f.specialty} onChange={(e) => setF({ ...f, specialty: e.target.value })} /></div>
-          <div><Label>Email</Label><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
-          <div><Label>Teléfono</Label><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
-          <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
-            <Mail className="mt-0.5 h-3 w-3 shrink-0" />
-            Con el email podrás enviarle una invitación para que acceda a la app con rol de coach.
-          </p>
-          <Button type="submit" disabled={mut.isPending} className="h-11 w-full rounded-full font-semibold">Guardar</Button>
-        </form>
+      <DialogContent className="max-h-[85dvh] max-w-sm overflow-y-auto rounded-3xl">
+        <DialogHeader><DialogTitle>Convertir alumno en coach</DialogTitle></DialogHeader>
+        <div>
+          <Label>Buscar alumno</Label>
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nombre del alumno" />
+        </div>
+        <div className="space-y-2">
+          {members.isLoading && <p className="text-xs text-muted-foreground">Cargando alumnos…</p>}
+          {!members.isLoading && list.length === 0 && (
+            <p className="py-4 text-center text-xs text-muted-foreground">No hay alumnos que coincidan.</p>
+          )}
+          {list.map((m) => {
+            const already = taken.has(m.full_name.toLowerCase()) || (!!m.email && taken.has(m.email.toLowerCase()));
+            return (
+              <div key={m.id} className="rounded-2xl border bg-card p-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-secondary">
+                    <UserCog className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{m.full_name}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">{m.email || m.phone || "—"}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={already || mut.isPending}
+                    onClick={() => mut.mutate(m)}
+                    className="h-9 rounded-full px-4 text-xs font-semibold"
+                  >
+                    {already ? "Ya es coach" : "Convertir"}
+                  </Button>
+                </div>
+                {!already && (
+                  <Input
+                    className="mt-2 h-9"
+                    placeholder="Especialidad (opcional)"
+                    value={specialty[m.id] ?? ""}
+                    onChange={(e) => setSpecialty((s) => ({ ...s, [m.id]: e.target.value }))}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+          <Mail className="mt-0.5 h-3 w-3 shrink-0" />
+          Si el alumno tiene email, luego podrás enviarle la invitación para que entre con rol de coach.
+        </p>
       </DialogContent>
     </Dialog>
   );
