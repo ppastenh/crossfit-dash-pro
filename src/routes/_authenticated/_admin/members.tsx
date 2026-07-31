@@ -433,12 +433,6 @@ function BoxInviteCard() {
     toast.success("Código copiado");
   }
 
-  function shareWhatsapp() {
-    const text = encodeURIComponent(
-      `¡Únete al box! Usa este código de invitación: ${code}`
-    );
-    window.open(`https://wa.me/?text=${text}`, "_blank");
-  }
 
   return (
     <div className="mb-4 rounded-3xl border bg-gradient-to-br from-primary/15 via-card to-card p-5">
@@ -460,22 +454,15 @@ function BoxInviteCard() {
       >
         {isLoading ? "…" : code}
       </button>
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-4">
         <Button
           onClick={() => regen.mutate()}
           disabled={regen.isPending}
           variant="secondary"
-          className="h-11 rounded-full font-semibold"
+          className="h-11 w-full rounded-full font-semibold"
         >
           <RefreshCw className={`mr-2 h-4 w-4 ${regen.isPending ? "animate-spin" : ""}`} />
           Regenerar
-        </Button>
-        <Button
-          onClick={shareWhatsapp}
-          className="h-11 rounded-full bg-[#25D366] font-semibold text-white hover:bg-[#25D366]/90"
-        >
-          <MessageCircle className="mr-2 h-4 w-4" />
-          WhatsApp
         </Button>
       </div>
     </div>
