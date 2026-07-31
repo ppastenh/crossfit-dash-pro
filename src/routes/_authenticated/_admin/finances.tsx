@@ -101,12 +101,23 @@ function AddPaymentDialog() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const qc = useQueryClient();
-  const [form, setForm] = useState({ member_id: "", amount: "", method: "efectivo", status: "pagado" });
+  const [form, setForm] = useState({ member_id: "", plan_id: "", amount: "", method: "efectivo", status: "pagado" });
+
+  const plans = useQuery({
+    queryKey: ["plans"],
+    queryFn: async () => (await supabase.from("plans").select("id, name, price").order("name")).data ?? [],
+  });
 
   const members = useQuery({
     queryKey: ["pay-members", q],
-    queryFn: async () => (await supabase.from("members").select("id, full_name").ilike("full_name", `%${q}%`).limit(10)).data ?? [],
+    queryFn: async () => (await supabase.from("members").select("id, full_name, plan_id").ilike("full_name", `%${q}%`).limit(10)).data ?? [],
   });
+
+  function pickPlan(planId: string) {
+    const p = (plans.data ?? []).find((x) => x.id === planId);
+    setForm((f) => ({ ...f, plan_id: planId, amount: p ? String(p.price) : f.amount }));
+  }
+
 
   const mut = useMutation({
     mutationFn: async () => {
