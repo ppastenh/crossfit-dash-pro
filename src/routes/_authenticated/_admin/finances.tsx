@@ -101,12 +101,23 @@ function AddPaymentDialog() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const qc = useQueryClient();
-  const [form, setForm] = useState({ member_id: "", amount: "", method: "efectivo", status: "pagado" });
+  const [form, setForm] = useState({ member_id: "", plan_id: "", amount: "", method: "efectivo", status: "pagado" });
+
+  const plans = useQuery({
+    queryKey: ["plans"],
+    queryFn: async () => (await supabase.from("plans").select("id, name, price").order("name")).data ?? [],
+  });
 
   const members = useQuery({
     queryKey: ["pay-members", q],
-    queryFn: async () => (await supabase.from("members").select("id, full_name").ilike("full_name", `%${q}%`).limit(10)).data ?? [],
+    queryFn: async () => (await supabase.from("members").select("id, full_name, plan_id").ilike("full_name", `%${q}%`).limit(10)).data ?? [],
   });
+
+  function pickPlan(planId: string) {
+    const p = (plans.data ?? []).find((x) => x.id === planId);
+    setForm((f) => ({ ...f, plan_id: planId, amount: p ? String(p.price) : f.amount }));
+  }
+
 
   const mut = useMutation({
     mutationFn: async () => {
@@ -119,7 +130,7 @@ function AddPaymentDialog() {
       });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Pago registrado"); qc.invalidateQueries(); setOpen(false); setForm({ member_id: "", amount: "", method: "efectivo", status: "pagado" }); },
+    onSuccess: () => { toast.success("Pago registrado"); qc.invalidateQueries(); setOpen(false); setQ(""); setForm({ member_id: "", plan_id: "", amount: "", method: "efectivo", status: "pagado" }); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
   });
 
@@ -136,12 +147,27 @@ function AddPaymentDialog() {
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar..." />
             <div className="mt-1 max-h-32 space-y-1 overflow-y-auto">
               {(members.data ?? []).map((m) => (
-                <button key={m.id} type="button" onClick={() => { setForm({ ...form, member_id: m.id }); setQ(m.full_name); }}
+                <button key={m.id} type="button" onClick={() => {
+                  const p = (plans.data ?? []).find((x) => x.id === m.plan_id);
+                  setForm({ ...form, member_id: m.id, plan_id: m.plan_id ?? "", amount: p ? String(p.price) : form.amount });
+                  setQ(m.full_name);
+                }}
                   className={`block w-full rounded-lg p-2 text-left text-sm ${form.member_id === m.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
                   {m.full_name}
                 </button>
               ))}
             </div>
+          </div>
+          <div>
+            <Label>Plan</Label>
+            <Select value={form.plan_id} onValueChange={pickPlan}>
+              <SelectTrigger><SelectValue placeholder="Selecciona un plan" /></SelectTrigger>
+              <SelectContent>
+                {(plans.data ?? []).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name} — ${Number(p.price).toLocaleString()}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div><Label>Monto</Label><Input type="number" step="0.01" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-2">
