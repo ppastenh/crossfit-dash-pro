@@ -50,12 +50,19 @@ const PERMISSIONS: Array<{ key: string; label: string; hint: string }> = [
   { key: "files_manage", label: "Gestionar archivos", hint: "Subir o reemplazar contratos y documentos" },
 ];
 
-function genCode() {
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
+// Permisos típicos de un coach (no de un administrador)
+const COACH_DEFAULT_PERMISSIONS: Permissions = {
+  classes_create: false,
+  classes_edit: false,
+  attendance_mark: true,
+  bookings_manage: true,
+  members_view: true,
+  members_edit: false,
+  prs_manage: true,
+  finances_view: false,
+  payments_register: false,
+  files_manage: false,
+};
 
 function CoachesPage() {
   const coaches = useQuery({
