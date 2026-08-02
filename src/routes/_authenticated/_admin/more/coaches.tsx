@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, UserCog, ShieldCheck, Link2, Pause, Play, Trash2, Mail } from "lucide-react";
+import { Plus, UserCog, ShieldCheck, Pause, Play, Trash2, Mail } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,12 +50,19 @@ const PERMISSIONS: Array<{ key: string; label: string; hint: string }> = [
   { key: "files_manage", label: "Gestionar archivos", hint: "Subir o reemplazar contratos y documentos" },
 ];
 
-function genCode() {
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
+// Permisos típicos de un coach (no de un administrador)
+const COACH_DEFAULT_PERMISSIONS: Permissions = {
+  classes_create: false,
+  classes_edit: false,
+  attendance_mark: true,
+  bookings_manage: true,
+  members_view: true,
+  members_edit: false,
+  prs_manage: true,
+  finances_view: false,
+  payments_register: false,
+  files_manage: false,
+};
 
 function CoachesPage() {
   const coaches = useQuery({
@@ -125,7 +132,7 @@ function CoachCard({ coach }: { coach: Coach }) {
 
       <div className="mt-3 flex items-center gap-2">
         <PermissionsDialog coach={coach} granted={granted} />
-        <InviteCoach coach={coach} />
+        
         <button
           onClick={() => update.mutate({ status: paused ? "activo" : "pausado" })}
           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary active:bg-secondary/70"
@@ -191,39 +198,6 @@ function PermissionsDialog({ coach, granted }: { coach: Coach; granted: number }
   );
 }
 
-function InviteCoach({ coach }: { coach: Coach }) {
-  const invite = useMutation({
-    mutationFn: async () => {
-      const code = genCode();
-      const { data: userRes } = await supabase.auth.getUser();
-      const { error } = await supabase.from("admin_invites").insert({
-        code,
-        role: "coach",
-        email: coach.email || null,
-        expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        created_by: userRes.user?.id ?? null,
-      });
-      if (error) throw error;
-      return code;
-    },
-    onSuccess: async (code) => {
-      await navigator.clipboard.writeText(`${window.location.origin}/auth?invite=${code}`);
-      toast.success("Enlace de coach copiado", { description: code });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
-  });
-
-  return (
-    <button
-      onClick={() => invite.mutate()}
-      disabled={invite.isPending || !!coach.user_id}
-      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary active:bg-primary/25 disabled:opacity-40"
-      aria-label="Invitar coach"
-    >
-      <Link2 className="h-4 w-4" />
-    </button>
-  );
-}
 
 function AddCoach({ variant }: { variant?: "cta" }) {
   const [open, setOpen] = useState(false);
@@ -261,6 +235,7 @@ function AddCoach({ variant }: { variant?: "cta" }) {
         email: m.email,
         phone: m.phone,
         specialty: specialty[m.id] || null,
+        permissions: COACH_DEFAULT_PERMISSIONS,
       });
       if (error) throw error;
     },
