@@ -281,8 +281,6 @@ function ClassCard({ c }: { c: ClassRow }) {
 function AddClassFab({ defaultDate }: { defaultDate: string }) {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
-  const navigate = useNavigate();
-  void navigate;
   const [form, setForm] = useState({
     name: "",
     class_date: defaultDate,
