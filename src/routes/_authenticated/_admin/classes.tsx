@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Clock, User as UserIcon } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, CalendarDays, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
-import { format, addDays, parseISO } from "date-fns";
+import {
+  format, addDays, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
+  addMonths, isSameDay, isSameMonth,
+} from "date-fns";
+import { es } from "date-fns/locale";
 import { toast } from "sonner";
 
 const WEEK_DAYS = [
@@ -23,84 +27,263 @@ const WEEK_DAYS = [
   { label: "D", value: 0 },
 ];
 
+const DAY_LABELS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
+
+const HOUR_START = 6;
+const HOUR_END = 20;
+const HOUR_PX = 56;
+
 export const Route = createFileRoute("/_authenticated/_admin/classes")({
   head: () => ({
     meta: [
       { title: "Clases — Dlovebox" },
-      { name: "description", content: "Programación y gestión de clases y WODs del día." },
+      { name: "description", content: "Calendario semanal y mensual de clases y WODs del box." },
       { property: "og:title", content: "Clases — Dlovebox" },
-      { property: "og:description", content: "Clases del día y programación." },
+      { property: "og:description", content: "Calendario de clases del box." },
     ],
   }),
   component: ClassesPage,
 });
 
-const levelColors: Record<string, string> = {
-  principiante: "bg-success/20 text-success",
-  intermedio: "bg-warning/20 text-warning",
-  avanzado: "bg-destructive/20 text-destructive",
-  todos: "bg-secondary text-foreground",
+type ClassRow = {
+  id: string;
+  name: string;
+  class_date: string;
+  start_time: string;
+  duration_minutes: number;
+  capacity: number;
+  level: string;
+  status: string;
+  coach: { full_name: string } | null;
+  class_attendees: { id: string }[] | null;
 };
 
-function ClassesPage() {
-  const today = format(new Date(), "yyyy-MM-dd");
-  const classes = useQuery({
-    queryKey: ["classes-today", today],
-    queryFn: async () => (
-      await supabase
+function useClassesRange(from: Date, to: Date) {
+  const f = format(from, "yyyy-MM-dd");
+  const t = format(to, "yyyy-MM-dd");
+  return useQuery({
+    queryKey: ["classes-range", f, t],
+    queryFn: async () =>
+      ((await supabase
         .from("classes")
-        .select("id, name, start_time, capacity, level, status, coach:coach_id(full_name), class_attendees(id)")
-        .eq("class_date", today)
-        .order("start_time")
-    ).data ?? [],
+        .select("id, name, class_date, start_time, duration_minutes, capacity, level, status, coach:coach_id(full_name), class_attendees(id)")
+        .gte("class_date", f)
+        .lte("class_date", t)
+        .order("start_time")).data ?? []) as unknown as ClassRow[],
   });
+}
+
+function ClassesPage() {
+  const [mode, setMode] = useState<"semana" | "mes">("semana");
+  const [selected, setSelected] = useState(new Date());
 
   return (
-    <AdminShell title="Clases">
-      <p className="mb-4 text-xs uppercase tracking-widest text-muted-foreground">Hoy · {format(new Date(), "dd MMM yyyy")}</p>
-      <div className="space-y-3">
-        {classes.data?.length === 0 && (
-          <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-            No hay clases hoy. Crea la primera con el botón +
-          </div>
-        )}
-        {classes.data?.map((c) => {
-          const enrolled = c.class_attendees?.length ?? 0;
-          const pct = c.capacity ? Math.min(100, (enrolled / c.capacity) * 100) : 0;
-          return (
-            <Link key={c.id} to="/classes/$id" params={{ id: c.id }} className="block rounded-3xl border bg-card p-4 active:scale-[0.99] transition-transform">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="truncate text-base font-bold">{c.name}</h3>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{c.start_time?.slice(0, 5)}</span>
-                    {c.coach?.full_name && <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" />{c.coach.full_name}</span>}
-                  </div>
-                </div>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${levelColors[c.level] ?? "bg-secondary"}`}>{c.level}</span>
-              </div>
-              <div className="mt-3 flex items-center gap-3">
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
-                  <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
-                </div>
-                <span className="text-xs font-bold">{enrolled}/{c.capacity}</span>
-              </div>
-            </Link>
-          );
-        })}
+    <AdminShell title="Clases" right={<CalendarDays className="h-5 w-5 text-muted-foreground" />}>
+      <div className="grid grid-cols-2 gap-1 rounded-full bg-secondary p-1">
+        {(["semana", "mes"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={`rounded-full py-2 text-sm font-semibold capitalize transition-colors ${
+              mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+            }`}
+          >
+            {m}
+          </button>
+        ))}
       </div>
 
-      <AddClassFab />
+      {mode === "semana" ? (
+        <WeekView selected={selected} onSelect={setSelected} />
+      ) : (
+        <MonthView selected={selected} onSelect={setSelected} />
+      )}
+
+      <AddClassFab defaultDate={format(selected, "yyyy-MM-dd")} />
     </AdminShell>
   );
 }
 
-function AddClassFab() {
+/* ---------------- Week ---------------- */
+
+function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) => void }) {
+  const weekStart = startOfWeek(selected, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(selected, { weekStartsOn: 1 });
+  const { data } = useClassesRange(weekStart, weekEnd);
+  const dayKey = format(selected, "yyyy-MM-dd");
+  const dayClasses = (data ?? []).filter((c) => c.class_date === dayKey);
+
+  return (
+    <div className="mt-4">
+      <h2 className="text-xl font-black tracking-tight">Calendario</h2>
+
+      <div className="mt-3 grid grid-cols-7 gap-1">
+        {DAY_LABELS.map((lbl, i) => {
+          const d = addDays(weekStart, i);
+          const active = isSameDay(d, selected);
+          return (
+            <button key={lbl} onClick={() => onSelect(d)} className="flex flex-col items-center gap-1 py-1">
+              <span className="text-[10px] font-semibold text-muted-foreground">{lbl}</span>
+              <span
+                className={`grid h-8 w-8 place-items-center rounded-full text-sm font-bold transition-colors ${
+                  active ? "bg-primary text-primary-foreground" : "text-foreground"
+                }`}
+              >
+                {format(d, "d")}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 border-t border-border/60 pt-2">
+        <div className="relative" style={{ height: (HOUR_END - HOUR_START + 1) * HOUR_PX }}>
+          {Array.from({ length: HOUR_END - HOUR_START + 1 }).map((_, i) => (
+            <div key={i} className="absolute left-0 right-0 flex gap-2" style={{ top: i * HOUR_PX }}>
+              <span className="w-11 shrink-0 -translate-y-2 text-[11px] tabular-nums text-muted-foreground">
+                {String(HOUR_START + i).padStart(2, "0")}:00
+              </span>
+              <div className="flex-1 border-t border-border/40" />
+            </div>
+          ))}
+
+          {dayClasses.map((c) => {
+            const [h, m] = c.start_time.split(":").map(Number);
+            const top = (h + m / 60 - HOUR_START) * HOUR_PX;
+            const height = Math.max(44, ((c.duration_minutes || 60) / 60) * HOUR_PX - 6);
+            if (top < -HOUR_PX) return null;
+            const enrolled = c.class_attendees?.length ?? 0;
+            const endMin = h * 60 + m + (c.duration_minutes || 60);
+            const end = `${String(Math.floor(endMin / 60) % 24).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+            return (
+              <Link
+                key={c.id}
+                to="/classes/$id"
+                params={{ id: c.id }}
+                className="absolute right-0 flex flex-col justify-center rounded-2xl border border-primary/40 bg-primary/15 px-3 py-2 active:scale-[0.99]"
+                style={{ top, height, left: 52 }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="truncate text-sm font-bold">{c.name}</p>
+                  <span className="shrink-0 text-[11px] font-bold text-primary">{enrolled}/{c.capacity}</span>
+                </div>
+                <p className="truncate text-[11px] text-muted-foreground">
+                  {c.start_time.slice(0, 5)} - {end}
+                  {c.coach?.full_name ? ` · ${c.coach.full_name}` : ""}
+                </p>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Month ---------------- */
+
+function MonthView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) => void }) {
+  const [cursor, setCursor] = useState(startOfMonth(selected));
+  const gridStart = startOfWeek(startOfMonth(cursor), { weekStartsOn: 1 });
+  const gridEnd = endOfWeek(endOfMonth(cursor), { weekStartsOn: 1 });
+  const { data } = useClassesRange(gridStart, gridEnd);
+  const withClasses = new Set((data ?? []).map((c) => c.class_date));
+  const dayKey = format(selected, "yyyy-MM-dd");
+  const dayClasses = (data ?? []).filter((c) => c.class_date === dayKey);
+
+  const cells: Date[] = [];
+  for (let d = gridStart; d <= gridEnd; d = addDays(d, 1)) cells.push(d);
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between">
+        <button onClick={() => setCursor(addMonths(cursor, -1))} className="grid h-9 w-9 place-items-center rounded-full bg-secondary">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <p className="text-base font-black capitalize">{format(cursor, "MMMM yyyy", { locale: es })}</p>
+        <button onClick={() => setCursor(addMonths(cursor, 1))} className="grid h-9 w-9 place-items-center rounded-full bg-secondary">
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-7 gap-y-1 text-center">
+        {DAY_LABELS.map((l) => (
+          <span key={l} className="text-[10px] font-semibold text-muted-foreground">{l}</span>
+        ))}
+        {cells.map((d) => {
+          const key = format(d, "yyyy-MM-dd");
+          const active = isSameDay(d, selected);
+          const inMonth = isSameMonth(d, cursor);
+          return (
+            <button key={key} onClick={() => onSelect(d)} className="flex flex-col items-center py-1">
+              <span
+                className={`grid h-9 w-9 place-items-center rounded-full text-sm font-semibold transition-colors ${
+                  active ? "bg-primary text-primary-foreground" : inMonth ? "text-foreground" : "text-muted-foreground/40"
+                }`}
+              >
+                {format(d, "d")}
+              </span>
+              <span className={`mt-0.5 h-1 w-1 rounded-full ${withClasses.has(key) && !active ? "bg-primary" : "bg-transparent"}`} />
+            </button>
+          );
+        })}
+      </div>
+
+      <h3 className="mt-5 text-sm font-bold">
+        Clases · <span className="capitalize">{format(selected, "EEEE d 'de' MMMM", { locale: es })}</span>
+      </h3>
+      <div className="mt-2 space-y-2">
+        {dayClasses.length === 0 && (
+          <p className="rounded-2xl border border-dashed p-4 text-center text-xs text-muted-foreground">Sin clases este día</p>
+        )}
+        {dayClasses.slice(0, 3).map((c) => (
+          <ClassCard key={c.id} c={c} />
+        ))}
+      </div>
+      {dayClasses.length > 0 && (
+        <Link
+          to="/classes/$id"
+          params={{ id: dayClasses[0].id }}
+          className="mt-3 flex items-center justify-between text-xs font-semibold text-primary"
+        >
+          Ver todas las clases del día <ArrowRight className="h-4 w-4" />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function ClassCard({ c }: { c: ClassRow }) {
+  const enrolled = c.class_attendees?.length ?? 0;
+  const [h, m] = c.start_time.split(":").map(Number);
+  const endMin = h * 60 + m + (c.duration_minutes || 60);
+  const end = `${String(Math.floor(endMin / 60) % 24).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+  return (
+    <Link
+      to="/classes/$id"
+      params={{ id: c.id }}
+      className="flex items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-3 active:scale-[0.99]"
+    >
+      <div className="min-w-0">
+        <p className="truncate text-sm font-bold">{c.name}</p>
+        <p className="truncate text-[11px] text-muted-foreground">
+          {c.start_time.slice(0, 5)} - {end}
+        </p>
+        {c.coach?.full_name && <p className="truncate text-[11px] text-muted-foreground">{c.coach.full_name}</p>}
+      </div>
+      <span className="shrink-0 text-xs font-bold text-primary">{enrolled}/{c.capacity}</span>
+    </Link>
+  );
+}
+
+/* ---------------- Create ---------------- */
+
+function AddClassFab({ defaultDate }: { defaultDate: string }) {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
   const [form, setForm] = useState({
     name: "",
-    class_date: format(new Date(), "yyyy-MM-dd"),
+    class_date: defaultDate,
     start_time: "07:00",
     duration_minutes: 60,
     capacity: 15,
@@ -121,7 +304,10 @@ function AddClassFab() {
 
   const openChange = (v: boolean) => {
     setOpen(v);
-    if (v) setSelectedDays([baseDow]);
+    if (v) {
+      setForm((f) => ({ ...f, class_date: defaultDate }));
+      setSelectedDays([baseDow]);
+    }
   };
 
   const { data: coaches } = useQuery({
@@ -131,7 +317,6 @@ function AddClassFab() {
   const mut = useMutation({
     mutationFn: async () => {
       const base = parseISO(form.class_date);
-      const rows: Array<typeof common & { class_date: string }> = [];
       const common = {
         name: form.name,
         start_time: form.start_time,
@@ -140,6 +325,7 @@ function AddClassFab() {
         level: form.level as "todos",
         coach_id: form.coach_id || null,
       };
+      const rows: Array<typeof common & { class_date: string }> = [];
       if (repeatWeekly && selectedDays.length > 0) {
         const seen = new Set<string>();
         for (let w = 0; w < weeksAhead; w++) {
@@ -161,7 +347,7 @@ function AddClassFab() {
       if (error) throw error;
       return rows.length;
     },
-    onSuccess: (n) => { toast.success(n > 1 ? `${n} clases creadas` : "Clase creada"); qc.invalidateQueries({ queryKey: ["classes-today"] }); setOpen(false); },
+    onSuccess: (n) => { toast.success(n > 1 ? `${n} clases creadas` : "Clase creada"); qc.invalidateQueries({ queryKey: ["classes-range"] }); setOpen(false); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
   });
 
