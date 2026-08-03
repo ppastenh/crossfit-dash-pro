@@ -30,8 +30,9 @@ const WEEK_DAYS = [
 const DAY_LABELS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 
 const HOUR_START = 6;
-const HOUR_END = 20;
-const HOUR_PX = 56;
+const HOUR_END = 23;
+const HOUR_PX = 64;
+const GUTTER = 52;
 
 export const Route = createFileRoute("/_authenticated/_admin/classes")({
   head: () => ({
@@ -106,6 +107,45 @@ function ClassesPage() {
 
 /* ---------------- Week ---------------- */
 
+function layoutDay(list: ClassRow[]) {
+  const items = [...list]
+    .map((c) => {
+      const [h, m] = c.start_time.split(":").map(Number);
+      const start = h * 60 + m;
+      return { c, start, end: start + (c.duration_minutes || 60) };
+    })
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+
+  const out: { c: ClassRow; col: number; cols: number }[] = [];
+  let group: typeof items = [];
+  let groupEnd = -1;
+
+  const flush = () => {
+    if (!group.length) return;
+    const colEnds: number[] = [];
+    const assigned = group.map((it) => {
+      let col = colEnds.findIndex((e) => e <= it.start);
+      if (col === -1) { col = colEnds.length; colEnds.push(it.end); }
+      else colEnds[col] = it.end;
+      return { it, col };
+    });
+    const cols = colEnds.length;
+    assigned.forEach(({ it, col }) => out.push({ c: it.c, col, cols }));
+    group = [];
+    groupEnd = -1;
+  };
+
+  for (const it of items) {
+    if (group.length && it.start >= groupEnd) flush();
+    group.push(it);
+    groupEnd = Math.max(groupEnd, it.end);
+  }
+  flush();
+  return out;
+}
+
+
+
 function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) => void }) {
   const weekStart = startOfWeek(selected, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(selected, { weekStartsOn: 1 });
@@ -136,46 +176,56 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
         })}
       </div>
 
-      <div className="mt-4 border-t border-border/60 pt-2">
-        <div className="relative" style={{ height: (HOUR_END - HOUR_START + 1) * HOUR_PX }}>
+      <div className="mt-4 border-t border-border/60 pt-3">
+        <div className="relative" style={{ height: (HOUR_END - HOUR_START + 1) * HOUR_PX + 8 }}>
           {Array.from({ length: HOUR_END - HOUR_START + 1 }).map((_, i) => (
-            <div key={i} className="absolute left-0 right-0 flex gap-2" style={{ top: i * HOUR_PX }}>
-              <span className="w-11 shrink-0 -translate-y-2 text-[11px] tabular-nums text-muted-foreground">
+            <div key={i} className="absolute left-0 right-0 flex items-center gap-2" style={{ top: i * HOUR_PX }}>
+              <span className="w-11 shrink-0 -translate-y-1/2 text-[11px] font-medium tabular-nums text-muted-foreground">
                 {String(HOUR_START + i).padStart(2, "0")}:00
               </span>
               <div className="flex-1 border-t border-border/40" />
             </div>
           ))}
 
-          {dayClasses.map((c) => {
+          {layoutDay(dayClasses).map(({ c, col, cols }) => {
             const [h, m] = c.start_time.split(":").map(Number);
-            const top = (h + m / 60 - HOUR_START) * HOUR_PX;
-            const height = Math.max(44, ((c.duration_minutes || 60) / 60) * HOUR_PX - 6);
-            if (top < -HOUR_PX) return null;
+            const dur = c.duration_minutes || 60;
+            const top = (h * 60 + m - HOUR_START * 60) * (HOUR_PX / 60);
+            const height = Math.max(34, (dur / 60) * HOUR_PX - 4);
+            if (top + height < 0) return null;
             const enrolled = c.class_attendees?.length ?? 0;
-            const endMin = h * 60 + m + (c.duration_minutes || 60);
+            const endMin = h * 60 + m + dur;
             const end = `${String(Math.floor(endMin / 60) % 24).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+            const widthPct = 100 / cols;
             return (
               <Link
                 key={c.id}
                 to="/classes/$id"
                 params={{ id: c.id }}
-                className="absolute right-0 flex flex-col justify-center rounded-2xl border border-primary/40 bg-primary/15 px-3 py-2 active:scale-[0.99]"
-                style={{ top, height, left: 52 }}
+                className="absolute flex flex-col justify-center overflow-hidden rounded-[18px] border border-primary/30 bg-gradient-to-br from-primary/25 to-primary/5 px-3 py-1.5 transition-transform active:scale-[0.99]"
+                style={{
+                  top,
+                  height,
+                  left: `calc(${GUTTER}px + (100% - ${GUTTER}px) * ${(col * widthPct) / 100})`,
+                  width: `calc((100% - ${GUTTER}px) * ${widthPct / 100} - 4px)`,
+                }}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="truncate text-sm font-bold">{c.name}</p>
-                  <span className="shrink-0 text-[11px] font-bold text-primary">{enrolled}/{c.capacity}</span>
+                  <p className="truncate text-sm font-bold leading-tight">{c.name}</p>
+                  <span className="shrink-0 text-[11px] font-bold text-primary">{enrolled}</span>
                 </div>
-                <p className="truncate text-[11px] text-muted-foreground">
+                <p className="truncate text-[11px] leading-tight text-muted-foreground">
                   {c.start_time.slice(0, 5)} - {end}
-                  {c.coach?.full_name ? ` · ${c.coach.full_name}` : ""}
                 </p>
+                {c.coach?.full_name && height > 52 && (
+                  <p className="truncate text-[11px] leading-tight text-muted-foreground/80">{c.coach.full_name}</p>
+                )}
               </Link>
             );
           })}
         </div>
       </div>
+
     </div>
   );
 }
