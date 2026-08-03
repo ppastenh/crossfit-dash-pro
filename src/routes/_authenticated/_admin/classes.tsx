@@ -16,6 +16,8 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { ClassQuickView } from "@/components/admin/ClassQuickView";
+
 
 const WEEK_DAYS = [
   { label: "L", value: 1 },
