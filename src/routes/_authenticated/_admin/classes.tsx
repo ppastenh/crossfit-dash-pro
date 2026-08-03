@@ -107,6 +107,45 @@ function ClassesPage() {
 
 /* ---------------- Week ---------------- */
 
+function layoutDay(list: ClassRow[]) {
+  const items = [...list]
+    .map((c) => {
+      const [h, m] = c.start_time.split(":").map(Number);
+      const start = h * 60 + m;
+      return { c, start, end: start + (c.duration_minutes || 60) };
+    })
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+
+  const out: { c: ClassRow; col: number; cols: number }[] = [];
+  let group: typeof items = [];
+  let groupEnd = -1;
+
+  const flush = () => {
+    if (!group.length) return;
+    const colEnds: number[] = [];
+    const assigned = group.map((it) => {
+      let col = colEnds.findIndex((e) => e <= it.start);
+      if (col === -1) { col = colEnds.length; colEnds.push(it.end); }
+      else colEnds[col] = it.end;
+      return { it, col };
+    });
+    const cols = colEnds.length;
+    assigned.forEach(({ it, col }) => out.push({ c: it.c, col, cols }));
+    group = [];
+    groupEnd = -1;
+  };
+
+  for (const it of items) {
+    if (group.length && it.start >= groupEnd) flush();
+    group.push(it);
+    groupEnd = Math.max(groupEnd, it.end);
+  }
+  flush();
+  return out;
+}
+
+
+
 function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) => void }) {
   const weekStart = startOfWeek(selected, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(selected, { weekStartsOn: 1 });
