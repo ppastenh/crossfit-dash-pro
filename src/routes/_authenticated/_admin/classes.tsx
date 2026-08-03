@@ -31,8 +31,44 @@ const DAY_LABELS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 
 const HOUR_START = 6;
 const HOUR_END = 23;
-const HOUR_PX = 64;
+const HOUR_PX = 72;
+const COMPACT_PX = 22;
 const GUTTER = 52;
+
+/** Hours (absolute, 0-23) that any class overlaps. */
+function busyHours(list: ClassRow[]) {
+  const set = new Set<number>();
+  for (const c of list) {
+    const [h, m] = c.start_time.split(":").map(Number);
+    const start = h * 60 + m;
+    const end = start + (c.duration_minutes || 60);
+    for (let hh = Math.floor(start / 60); hh <= Math.floor((end - 1) / 60); hh++) set.add(hh);
+  }
+  return set;
+}
+
+/** Builds a minute -> pixel mapper with compact empty hours. */
+function useTimeScale(list: ClassRow[]) {
+  const busy = busyHours(list);
+  const heights: number[] = [];
+  const tops: number[] = [];
+  let acc = 0;
+  for (let h = HOUR_START; h <= HOUR_END; h++) {
+    tops.push(acc);
+    const hh = busy.has(h) ? HOUR_PX : COMPACT_PX;
+    heights.push(hh);
+    acc += hh;
+  }
+  const total = acc;
+  const y = (minutes: number) => {
+    const clamped = Math.min(Math.max(minutes, HOUR_START * 60), (HOUR_END + 1) * 60);
+    const h = Math.min(Math.floor(clamped / 60), HOUR_END);
+    const i = h - HOUR_START;
+    return tops[i] + ((clamped - h * 60) / 60) * heights[i];
+  };
+  return { busy, heights, tops, total, y };
+}
+
 
 export const Route = createFileRoute("/_authenticated/_admin/classes")({
   head: () => ({
