@@ -30,8 +30,9 @@ const WEEK_DAYS = [
 const DAY_LABELS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 
 const HOUR_START = 6;
-const HOUR_END = 20;
-const HOUR_PX = 56;
+const HOUR_END = 23;
+const HOUR_PX = 64;
+const GUTTER = 52;
 
 export const Route = createFileRoute("/_authenticated/_admin/classes")({
   head: () => ({
