@@ -9,6 +9,8 @@ import {
   PlayCircle, PauseCircle, AlertCircle, Lock, Clock, KeyRound, Receipt, Trash2,
 } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { BookClassSheet } from "@/components/admin/BookClassSheet";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -125,6 +127,8 @@ export function StatusChip({ status }: { status: string }) {
 function MemberRow({ m }: { m: MemberListItem }) {
   const [expanded, setExpanded] = useState(false);
   const [sheet, setSheet] = useState(false);
+  const [book, setBook] = useState(false);
+
 
   const waHref = m.phone
     ? `https://wa.me/${m.phone.replace(/\D/g, "")}`
@@ -163,14 +167,15 @@ function MemberRow({ m }: { m: MemberListItem }) {
             <UserRound className="h-5 w-5" />
             Perfil
           </Link>
-          <Link
-            to="/classes"
+          <button
+            onClick={() => setBook(true)}
             className="flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] text-primary active:bg-secondary"
           >
             <CalendarDays className="h-5 w-5" />
             Reservar
-          </Link>
+          </button>
           <a
+
             href={waHref}
             target="_blank"
             rel="noreferrer"
@@ -190,6 +195,8 @@ function MemberRow({ m }: { m: MemberListItem }) {
       )}
 
       <MemberActionsSheet m={m} open={sheet} onOpenChange={setSheet} />
+      <BookClassSheet memberId={m.id} memberName={m.full_name} open={book} onOpenChange={setBook} />
+
     </div>
   );
 }
