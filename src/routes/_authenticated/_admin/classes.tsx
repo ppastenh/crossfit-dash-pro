@@ -255,11 +255,11 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
             const end = `${String(Math.floor(endMin / 60) % 24).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
             const widthPct = 100 / cols;
             return (
-              <Link
+              <button
                 key={c.id}
-                to="/classes/$id"
-                params={{ id: c.id }}
-                className="absolute flex flex-col justify-center overflow-hidden rounded-[18px] border border-primary/30 bg-gradient-to-br from-primary/25 to-primary/5 px-3 py-1.5 transition-transform active:scale-[0.99]"
+                type="button"
+                onClick={() => setQuick(c)}
+                className="absolute flex flex-col justify-center overflow-hidden rounded-[18px] border border-primary/30 bg-gradient-to-br from-primary/25 to-primary/5 px-3 py-1.5 text-left transition-transform active:scale-[0.99]"
                 style={{
                   top,
                   height,
@@ -277,10 +277,17 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
                 {c.coach?.full_name && height > 52 && (
                   <p className="truncate text-[11px] leading-tight text-muted-foreground/80">{c.coach.full_name}</p>
                 )}
-              </Link>
+              </button>
             );
           })}
         </div>
+
+        <ClassQuickView
+          c={quick ? { ...quick, enrolled: quick.class_attendees?.length ?? 0 } : null}
+          open={!!quick}
+          onOpenChange={(v) => !v && setQuick(null)}
+        />
+
 
       </div>
 
