@@ -31,8 +31,44 @@ const DAY_LABELS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 
 const HOUR_START = 6;
 const HOUR_END = 23;
-const HOUR_PX = 64;
+const HOUR_PX = 72;
+const COMPACT_PX = 22;
 const GUTTER = 52;
+
+/** Hours (absolute, 0-23) that any class overlaps. */
+function busyHours(list: ClassRow[]) {
+  const set = new Set<number>();
+  for (const c of list) {
+    const [h, m] = c.start_time.split(":").map(Number);
+    const start = h * 60 + m;
+    const end = start + (c.duration_minutes || 60);
+    for (let hh = Math.floor(start / 60); hh <= Math.floor((end - 1) / 60); hh++) set.add(hh);
+  }
+  return set;
+}
+
+/** Builds a minute -> pixel mapper with compact empty hours. */
+function useTimeScale(list: ClassRow[]) {
+  const busy = busyHours(list);
+  const heights: number[] = [];
+  const tops: number[] = [];
+  let acc = 0;
+  for (let h = HOUR_START; h <= HOUR_END; h++) {
+    tops.push(acc);
+    const hh = busy.has(h) ? HOUR_PX : COMPACT_PX;
+    heights.push(hh);
+    acc += hh;
+  }
+  const total = acc;
+  const y = (minutes: number) => {
+    const clamped = Math.min(Math.max(minutes, HOUR_START * 60), (HOUR_END + 1) * 60);
+    const h = Math.min(Math.floor(clamped / 60), HOUR_END);
+    const i = h - HOUR_START;
+    return tops[i] + ((clamped - h * 60) / 60) * heights[i];
+  };
+  return { busy, heights, tops, total, y };
+}
+
 
 export const Route = createFileRoute("/_authenticated/_admin/classes")({
   head: () => ({
@@ -152,6 +188,7 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
   const { data } = useClassesRange(weekStart, weekEnd);
   const dayKey = format(selected, "yyyy-MM-dd");
   const dayClasses = (data ?? []).filter((c) => c.class_date === dayKey);
+  const scale = useTimeScale(dayClasses);
 
   return (
     <div className="mt-4">
@@ -177,24 +214,42 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
       </div>
 
       <div className="mt-4 border-t border-border/60 pt-3">
-        <div className="relative" style={{ height: (HOUR_END - HOUR_START + 1) * HOUR_PX + 8 }}>
-          {Array.from({ length: HOUR_END - HOUR_START + 1 }).map((_, i) => (
-            <div key={i} className="absolute left-0 right-0 flex items-center gap-2" style={{ top: i * HOUR_PX }}>
-              <span className="w-11 shrink-0 -translate-y-1/2 text-[11px] font-medium tabular-nums text-muted-foreground">
-                {String(HOUR_START + i).padStart(2, "0")}:00
-              </span>
-              <div className="flex-1 border-t border-border/40" />
-            </div>
-          ))}
+        <div className="relative" style={{ height: scale.total + 8 }}>
+          {Array.from({ length: HOUR_END - HOUR_START + 1 }).map((_, i) => {
+            const hour = HOUR_START + i;
+            const isBusy = scale.busy.has(hour);
+            return (
+              <div key={i}>
+                <div className="absolute left-0 right-0 flex items-center gap-2" style={{ top: scale.tops[i] }}>
+                  <span
+                    className={`w-11 shrink-0 -translate-y-1/2 text-[11px] tabular-nums ${
+                      isBusy ? "font-semibold text-foreground" : "font-medium text-muted-foreground/60"
+                    }`}
+                  >
+                    {String(hour).padStart(2, "0")}:00
+                  </span>
+                  {!isBusy && <div className="flex-1 border-t border-border/30" />}
+                </div>
+                {isBusy &&
+                  [1, 2, 3].map((q) => (
+                    <div
+                      key={q}
+                      className="absolute right-0 border-t border-dashed border-border/20"
+                      style={{ top: scale.tops[i] + (scale.heights[i] * q) / 4, left: GUTTER }}
+                    />
+                  ))}
+              </div>
+            );
+          })}
 
           {layoutDay(dayClasses).map(({ c, col, cols }) => {
             const [h, m] = c.start_time.split(":").map(Number);
             const dur = c.duration_minutes || 60;
-            const top = (h * 60 + m - HOUR_START * 60) * (HOUR_PX / 60);
-            const height = Math.max(34, (dur / 60) * HOUR_PX - 4);
-            if (top + height < 0) return null;
+            const startMin = h * 60 + m;
+            const endMin = startMin + dur;
+            const top = scale.y(startMin);
+            const height = Math.max(34, scale.y(endMin) - top - 4);
             const enrolled = c.class_attendees?.length ?? 0;
-            const endMin = h * 60 + m + dur;
             const end = `${String(Math.floor(endMin / 60) % 24).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
             const widthPct = 100 / cols;
             return (
@@ -224,6 +279,7 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
             );
           })}
         </div>
+
       </div>
 
     </div>
