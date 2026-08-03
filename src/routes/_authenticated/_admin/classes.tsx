@@ -307,6 +307,8 @@ function MonthView({ selected, onSelect }: { selected: Date; onSelect: (d: Date)
   const withClasses = new Set((data ?? []).map((c) => c.class_date));
   const dayKey = format(selected, "yyyy-MM-dd");
   const dayClasses = (data ?? []).filter((c) => c.class_date === dayKey);
+  const [quick, setQuick] = useState<ClassRow | null>(null);
+
 
   const cells: Date[] = [];
   for (let d = gridStart; d <= gridEnd; d = addDays(d, 1)) cells.push(d);
