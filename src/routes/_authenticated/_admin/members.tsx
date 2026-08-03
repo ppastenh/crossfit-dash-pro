@@ -193,6 +193,8 @@ function MemberRow({ m }: { m: MemberListItem }) {
       )}
 
       <MemberActionsSheet m={m} open={sheet} onOpenChange={setSheet} />
+      <BookClassSheet memberId={m.id} memberName={m.full_name} open={book} onOpenChange={setBook} />
+
     </div>
   );
 }
