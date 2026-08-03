@@ -165,14 +165,15 @@ function MemberRow({ m }: { m: MemberListItem }) {
             <UserRound className="h-5 w-5" />
             Perfil
           </Link>
-          <Link
-            to="/classes"
+          <button
+            onClick={() => setBook(true)}
             className="flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] text-primary active:bg-secondary"
           >
             <CalendarDays className="h-5 w-5" />
             Reservar
-          </Link>
+          </button>
           <a
+
             href={waHref}
             target="_blank"
             rel="noreferrer"
