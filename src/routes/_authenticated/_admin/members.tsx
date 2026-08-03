@@ -125,6 +125,8 @@ export function StatusChip({ status }: { status: string }) {
 function MemberRow({ m }: { m: MemberListItem }) {
   const [expanded, setExpanded] = useState(false);
   const [sheet, setSheet] = useState(false);
+  const [book, setBook] = useState(false);
+
 
   const waHref = m.phone
     ? `https://wa.me/${m.phone.replace(/\D/g, "")}`
