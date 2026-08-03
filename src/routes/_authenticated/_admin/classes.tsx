@@ -188,6 +188,7 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
   const { data } = useClassesRange(weekStart, weekEnd);
   const dayKey = format(selected, "yyyy-MM-dd");
   const dayClasses = (data ?? []).filter((c) => c.class_date === dayKey);
+  const scale = useTimeScale(dayClasses);
 
   return (
     <div className="mt-4">
