@@ -354,7 +354,7 @@ function MonthView({ selected, onSelect }: { selected: Date; onSelect: (d: Date)
           <p className="rounded-2xl border border-dashed p-4 text-center text-xs text-muted-foreground">Sin clases este día</p>
         )}
         {dayClasses.slice(0, 3).map((c) => (
-          <ClassCard key={c.id} c={c} />
+          <ClassCard key={c.id} c={c} onQuick={() => setQuick(c)} />
         ))}
       </div>
       {dayClasses.length > 0 && (
@@ -366,20 +366,26 @@ function MonthView({ selected, onSelect }: { selected: Date; onSelect: (d: Date)
           Ver todas las clases del día <ArrowRight className="h-4 w-4" />
         </Link>
       )}
+
+      <ClassQuickView
+        c={quick ? { ...quick, enrolled: quick.class_attendees?.length ?? 0 } : null}
+        open={!!quick}
+        onOpenChange={(v: boolean) => !v && setQuick(null)}
+      />
     </div>
   );
 }
 
-function ClassCard({ c }: { c: ClassRow }) {
+function ClassCard({ c, onQuick }: { c: ClassRow; onQuick: () => void }) {
   const enrolled = c.class_attendees?.length ?? 0;
   const [h, m] = c.start_time.split(":").map(Number);
   const endMin = h * 60 + m + (c.duration_minutes || 60);
   const end = `${String(Math.floor(endMin / 60) % 24).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
   return (
-    <Link
-      to="/classes/$id"
-      params={{ id: c.id }}
-      className="flex items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-3 active:scale-[0.99]"
+    <button
+      type="button"
+      onClick={onQuick}
+      className="flex w-full items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-3 text-left active:scale-[0.99]"
     >
       <div className="min-w-0">
         <p className="truncate text-sm font-bold">{c.name}</p>
@@ -389,9 +395,10 @@ function ClassCard({ c }: { c: ClassRow }) {
         {c.coach?.full_name && <p className="truncate text-[11px] text-muted-foreground">{c.coach.full_name}</p>}
       </div>
       <span className="shrink-0 text-xs font-bold text-primary">{enrolled}/{c.capacity}</span>
-    </Link>
+    </button>
   );
 }
+
 
 /* ---------------- Create ---------------- */
 
