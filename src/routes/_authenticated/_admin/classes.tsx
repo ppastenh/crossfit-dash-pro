@@ -94,7 +94,7 @@ type ClassRow = {
   level: string;
   status: string;
   coach: { full_name: string } | null;
-  class_attendees: { id: string }[] | null;
+  class_attendees: { id: string; status: string }[] | null;
 };
 
 function useClassesRange(from: Date, to: Date) {
@@ -105,7 +105,7 @@ function useClassesRange(from: Date, to: Date) {
     queryFn: async () =>
       ((await supabase
         .from("classes")
-        .select("id, name, class_date, start_time, duration_minutes, capacity, level, status, coach:coach_id(full_name), class_attendees(id)")
+        .select("id, name, class_date, start_time, duration_minutes, capacity, level, status, coach:coach_id(full_name), class_attendees(id, status)")
         .gte("class_date", f)
         .lte("class_date", t)
         .order("start_time")).data ?? []) as unknown as ClassRow[],
@@ -254,6 +254,7 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
             const top = scale.y(startMin);
             const height = Math.max(34, scale.y(endMin) - top - 4);
             const enrolled = c.class_attendees?.length ?? 0;
+            const attended = (c.class_attendees ?? []).filter((a) => a.status === "asistio").length;
             const end = `${String(Math.floor(endMin / 60) % 24).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
             const widthPct = 100 / cols;
             return (
@@ -271,7 +272,7 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
               >
                 <div className="flex items-start justify-between gap-2">
                   <p className="truncate text-sm font-bold leading-tight">{c.name}</p>
-                  <span className="shrink-0 text-[11px] font-bold text-primary">{enrolled}</span>
+                  <span className="shrink-0 text-[11px] font-bold text-primary">{attended}/{enrolled}</span>
                 </div>
                 <p className="truncate text-[11px] leading-tight text-muted-foreground">
                   {c.start_time.slice(0, 5)} - {end}
@@ -285,7 +286,7 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
         </div>
 
         <ClassQuickView
-          c={quick ? { ...quick, enrolled: quick.class_attendees?.length ?? 0 } : null}
+          c={quick ? { ...quick, enrolled: quick.class_attendees?.length ?? 0, attended: (quick.class_attendees ?? []).filter((a) => a.status === "asistio").length } : null}
           open={!!quick}
           onOpenChange={(v) => !v && setQuick(null)}
         />
@@ -370,7 +371,7 @@ function MonthView({ selected, onSelect }: { selected: Date; onSelect: (d: Date)
       )}
 
       <ClassQuickView
-        c={quick ? { ...quick, enrolled: quick.class_attendees?.length ?? 0 } : null}
+        c={quick ? { ...quick, enrolled: quick.class_attendees?.length ?? 0, attended: (quick.class_attendees ?? []).filter((a) => a.status === "asistio").length } : null}
         open={!!quick}
         onOpenChange={(v: boolean) => !v && setQuick(null)}
       />
@@ -380,6 +381,7 @@ function MonthView({ selected, onSelect }: { selected: Date; onSelect: (d: Date)
 
 function ClassCard({ c, onQuick }: { c: ClassRow; onQuick: () => void }) {
   const enrolled = c.class_attendees?.length ?? 0;
+  const attended = (c.class_attendees ?? []).filter((a) => a.status === "asistio").length;
   const [h, m] = c.start_time.split(":").map(Number);
   const endMin = h * 60 + m + (c.duration_minutes || 60);
   const end = `${String(Math.floor(endMin / 60) % 24).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
@@ -396,7 +398,7 @@ function ClassCard({ c, onQuick }: { c: ClassRow; onQuick: () => void }) {
         </p>
         {c.coach?.full_name && <p className="truncate text-[11px] text-muted-foreground">{c.coach.full_name}</p>}
       </div>
-      <span className="shrink-0 text-xs font-bold text-primary">{enrolled}/{c.capacity}</span>
+      <span className="shrink-0 text-xs font-bold text-primary">{attended}/{enrolled}</span>
     </button>
   );
 }
