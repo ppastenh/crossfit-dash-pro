@@ -145,8 +145,6 @@ export function ClassQuickView({
                 </p>
               </div>
 
-              <AttendanceSection classId={c.id} onChanged={invalidate} />
-
               <Link
                 to="/classes/$id"
                 params={{ id: c.id }}
