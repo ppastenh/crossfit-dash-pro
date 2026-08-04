@@ -434,6 +434,7 @@ export type Database = {
       }
       plans: {
         Row: {
+          benefits: string[]
           created_at: string
           description: string | null
           duration_days: number
@@ -443,6 +444,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          benefits?: string[]
           created_at?: string
           description?: string | null
           duration_days?: number
@@ -452,6 +454,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          benefits?: string[]
           created_at?: string
           description?: string | null
           duration_days?: number
