@@ -6,7 +6,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock, User as UserIcon, CalendarDays, Pencil, Trash2, ArrowRight, Users, Check } from "lucide-react";
+import { Clock, User as UserIcon, CalendarDays, Pencil, Trash2, ArrowRight, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -145,8 +145,6 @@ export function ClassQuickView({
                 </p>
               </div>
 
-              <AttendanceSection classId={c.id} onChanged={invalidate} />
-
               <Link
                 to="/classes/$id"
                 params={{ id: c.id }}
@@ -175,67 +173,6 @@ export function ClassQuickView({
         </div>
       </DrawerContent>
     </Drawer>
-  );
-}
-
-function AttendanceSection({ classId, onChanged }: { classId: string; onChanged: () => void }) {
-  const [saving, setSaving] = useState<string | null>(null);
-  const list = useQuery({
-    queryKey: ["class-attendance", classId],
-    queryFn: async () =>
-      (await supabase
-        .from("class_attendees")
-        .select("id, status, member:member_id(id, full_name)")
-        .eq("class_id", classId)).data ?? [],
-  });
-
-  const rows = list.data ?? [];
-  const attended = rows.filter((r) => r.status === "asistio").length;
-
-  const toggle = async (id: string, status: string) => {
-    setSaving(id);
-    const next = status === "asistio" ? "inscrito" : "asistio";
-    const { error } = await supabase.from("class_attendees").update({ status: next }).eq("id", id);
-    setSaving(null);
-    if (error) return toast.error(error.message);
-    list.refetch();
-    onChanged();
-  };
-
-  return (
-    <div className="mt-4 rounded-2xl border bg-card p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Asistencia</p>
-        <p className="text-sm font-bold">
-          <span className="text-primary">{attended}</span>
-          <span className="text-muted-foreground"> / {rows.length}</span>
-        </p>
-      </div>
-      <div className="mt-2 space-y-1">
-        {rows.length === 0 && <p className="py-2 text-center text-xs text-muted-foreground">Sin inscritos</p>}
-        {rows.map((r) => {
-          const ok = r.status === "asistio";
-          return (
-            <button
-              key={r.id}
-              type="button"
-              disabled={saving === r.id}
-              onClick={() => toggle(r.id, r.status)}
-              className="flex w-full items-center gap-2 rounded-xl bg-secondary px-3 py-2 text-left active:scale-[0.99]"
-            >
-              <span className="min-w-0 flex-1 truncate text-sm">{r.member?.full_name}</span>
-              <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full border ${
-                  ok ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"
-                }`}
-              >
-                <Check className="h-3.5 w-3.5" />
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
