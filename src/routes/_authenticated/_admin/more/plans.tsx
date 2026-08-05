@@ -93,7 +93,7 @@ function PlansPage() {
   });
 
   const toggleFlag = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Plan> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: { is_active?: boolean; is_featured?: boolean } }) => {
       const { error } = await supabase.from("plans").update(patch).eq("id", id);
       if (error) throw error;
     },
