@@ -25,14 +25,17 @@ export default defineTool({
       .order("start_time");
     if (error) throw new ToolError(error.message);
 
-    const classes = (data ?? []).map((c) => {
-      const attendees = (c as { class_attendees?: Array<{ status: string }> }).class_attendees ?? [];
-      const { class_attendees: _omit, coaches, ...rest } = c as Record<string, unknown> & {
-        class_attendees?: unknown; coaches?: { full_name: string } | null;
+    const classes = (data ?? []).map((row) => {
+      const c = row as unknown as Record<string, unknown> & {
+        class_attendees?: Array<{ status: string }>;
+        coaches?: { full_name: string } | Array<{ full_name: string }> | null;
       };
+      const attendees = c.class_attendees ?? [];
+      const { class_attendees: _omit, coaches, ...rest } = c;
+      const coach = Array.isArray(coaches) ? (coaches[0]?.full_name ?? null) : (coaches?.full_name ?? null);
       return {
         ...rest,
-        coach: coaches?.full_name ?? null,
+        coach,
         enrolled: attendees.filter((a) => a.status !== "lista_espera").length,
         attended: attendees.filter((a) => a.status === "asistio").length,
         waitlist: attendees.filter((a) => a.status === "lista_espera").length,
