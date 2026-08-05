@@ -439,6 +439,8 @@ export type Database = {
           description: string | null
           duration_days: number
           id: string
+          is_active: boolean
+          is_featured: boolean
           name: string
           price: number
           updated_at: string
@@ -449,6 +451,8 @@ export type Database = {
           description?: string | null
           duration_days?: number
           id?: string
+          is_active?: boolean
+          is_featured?: boolean
           name: string
           price?: number
           updated_at?: string
@@ -459,6 +463,8 @@ export type Database = {
           description?: string | null
           duration_days?: number
           id?: string
+          is_active?: boolean
+          is_featured?: boolean
           name?: string
           price?: number
           updated_at?: string
