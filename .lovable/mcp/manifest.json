@@ -1,0 +1,174 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://hqnpvizssxrtmusaqsjg.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "crossfit-hub",
+      "version": "0.1.0",
+      "title": "CrossFit Hub"
+    },
+    "tools": [
+      {
+        "name": "list_members",
+        "title": "Listar miembros",
+        "description": "Lista los miembros del box, con búsqueda opcional por nombre/email y filtro por estado (activo, suspendido, vencido, pausado, bloqueado).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "search": {
+              "description": "Texto a buscar en nombre o email",
+              "type": "string"
+            },
+            "status": {
+              "description": "Estado exacto: activo | suspendido | vencido | pausado | bloqueado",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Máximo de resultados (por defecto 25)",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_member",
+        "title": "Detalle de miembro",
+        "description": "Devuelve la ficha completa de un miembro: datos personales, plan, últimos pagos, últimas asistencias y PRs.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "member_id": {
+              "type": "string",
+              "description": "UUID del miembro (usar list_members para obtenerlo)"
+            }
+          },
+          "required": [
+            "member_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_classes",
+        "title": "Listar clases",
+        "description": "Lista las clases (WODs) programadas en un rango de fechas, con coach, hora, duración, cupos y número de inscritos.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "from": {
+              "description": "Fecha inicial YYYY-MM-DD (por defecto hoy)",
+              "type": "string"
+            },
+            "to": {
+              "description": "Fecha final YYYY-MM-DD (por defecto igual a 'from')",
+              "type": "string"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_class_roster",
+        "title": "Inscritos de una clase",
+        "description": "Devuelve la información de una clase y la lista de inscritos, asistentes y lista de espera.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "class_id": {
+              "type": "string",
+              "description": "UUID de la clase (usar list_classes)"
+            }
+          },
+          "required": [
+            "class_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "finance_summary",
+        "title": "Resumen financiero",
+        "description": "Resumen de ingresos de un mes: total cobrado, pagos pendientes y detalle de los últimos pagos registrados.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "month": {
+              "description": "Mes en formato YYYY-MM (por defecto el mes actual)",
+              "type": "string"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "check_in_member",
+        "title": "Registrar asistencia",
+        "description": "Registra el check-in (asistencia) de un miembro en el box, con la fecha y hora actual.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "member_id": {
+              "type": "string",
+              "description": "UUID del miembro (usar list_members)"
+            },
+            "notes": {
+              "description": "Nota opcional del check-in",
+              "type": "string"
+            }
+          },
+          "required": [
+            "member_id"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
