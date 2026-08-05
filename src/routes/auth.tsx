@@ -10,7 +10,13 @@ import { Dumbbell, Ticket } from "lucide-react";
 
 const authSearchSchema = z.object({
   invite: z.string().trim().min(1).max(64).optional(),
+  next: z.string().optional(),
 });
+
+/** Only same-origin relative paths are allowed as post-login redirects. */
+function safeNext(next?: string) {
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+}
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -23,16 +29,20 @@ export const Route = createFileRoute("/auth")({
       { property: "og:description", content: "Acceso al panel de administración." },
     ],
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ search }) => {
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/dashboard" });
+    if (!data.session) return;
+    const next = safeNext(search.next);
+    if (next) throw redirect({ href: next });
+    throw redirect({ to: "/dashboard" });
   },
   component: AuthPage,
 });
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { invite } = Route.useSearch();
+  const { invite, next } = Route.useSearch();
+  const nextPath = safeNext(next);
   const [mode, setMode] = useState<"signin" | "signup">(invite ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,7 +59,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signUp({
           email, password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${window.location.origin}${nextPath ?? "/"}`,
             data: {
               full_name: name,
               ...(trimmedInvite ? { invite_code: trimmedInvite } : {}),
@@ -66,6 +76,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
+      if (nextPath) { window.location.href = nextPath; return; }
       navigate({ to: "/dashboard" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error";
