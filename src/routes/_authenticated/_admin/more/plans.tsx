@@ -2,13 +2,21 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, MoreVertical, Copy, Star, PauseCircle, PlayCircle, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/_admin/more/plans")({
   head: () => ({
@@ -28,20 +36,31 @@ type Plan = {
   price: number;
   duration_days: number;
   benefits: string[] | null;
+  is_active: boolean;
+  is_featured: boolean;
 };
 
-const empty = { name: "", price: "", duration_days: "30", benefits: [] as string[] };
+const empty = {
+  name: "",
+  price: "",
+  duration_days: "30",
+  benefits: [] as string[],
+  is_active: true,
+};
 
 function PlansPage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Plan | null>(null);
   const [creating, setCreating] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
 
   const plans = useQuery({
     queryKey: ["plans"],
     queryFn: async () =>
       ((await supabase.from("plans").select("*").order("price")).data ?? []) as unknown as Plan[],
   });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["plans"] });
 
   const del = useMutation({
     mutationFn: async (id: string) => {
@@ -50,8 +69,35 @@ function PlansPage() {
     },
     onSuccess: () => {
       toast.success("Plan eliminado");
-      qc.invalidateQueries({ queryKey: ["plans"] });
+      invalidate();
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
+  });
+
+  const duplicate = useMutation({
+    mutationFn: async (p: Plan) => {
+      const { error } = await supabase.from("plans").insert({
+        name: `${p.name} (copia)`,
+        price: p.price,
+        duration_days: p.duration_days,
+        benefits: p.benefits ?? [],
+        is_active: p.is_active,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Plan duplicado");
+      invalidate();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
+  });
+
+  const toggleFlag = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Plan> }) => {
+      const { error } = await supabase.from("plans").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate(),
     onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
   });
 
@@ -74,56 +120,118 @@ function PlansPage() {
             Sin planes creados
           </p>
         )}
-        {plans.data?.map((p) => (
-          <div key={p.id} className="rounded-2xl border bg-card p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-bold">{p.name}</p>
-                <p className="text-[11px] text-muted-foreground">{p.duration_days} días</p>
+        {plans.data?.map((p) => {
+          const expanded = open === p.id;
+          const count = p.benefits?.length ?? 0;
+          return (
+            <div key={p.id} className="rounded-2xl border bg-card">
+              <div className="flex items-start gap-2 p-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-base font-bold">{p.name}</p>
+                    {p.is_featured && <Star className="h-3.5 w-3.5 shrink-0 fill-primary text-primary" />}
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{p.duration_days} días</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-lg font-black text-primary">
+                    ${Number(p.price).toLocaleString("es-CL")}
+                  </p>
+                  <p className="mt-0.5 flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        p.is_active ? "bg-primary" : "bg-muted-foreground",
+                      )}
+                    />
+                    {p.is_active ? "Activo" : "Inactivo"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setEditing(p)}
+                  className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted-foreground"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted-foreground">
+                    <MoreVertical className="h-4 w-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 rounded-2xl">
+                    <DropdownMenuItem onClick={() => setEditing(p)}>
+                      <Pencil className="mr-2 h-4 w-4" /> Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => duplicate.mutate(p)}>
+                      <Copy className="mr-2 h-4 w-4" /> Duplicar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => toggleFlag.mutate({ id: p.id, patch: { is_featured: !p.is_featured } })}
+                    >
+                      <Star className="mr-2 h-4 w-4" /> {p.is_featured ? "Quitar destacado" : "Destacar"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => toggleFlag.mutate({ id: p.id, patch: { is_active: !p.is_active } })}
+                    >
+                      {p.is_active ? (
+                        <><PauseCircle className="mr-2 h-4 w-4" /> Desactivar</>
+                      ) : (
+                        <><PlayCircle className="mr-2 h-4 w-4" /> Activar</>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => {
+                        if (confirm(`¿Eliminar el plan "${p.name}"?`)) del.mutate(p.id);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <p className="shrink-0 text-lg font-black text-primary">
-                ${Number(p.price).toLocaleString()}
-              </p>
-            </div>
 
-            {(p.benefits?.length ?? 0) > 0 && (
-              <div className="mt-3 rounded-xl bg-secondary/60 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Beneficios incluidos
-                </p>
-                <ul className="mt-2 space-y-1.5">
-                  {p.benefits!.map((b, i) => (
-                    <li key={i} className="flex items-start gap-2 text-xs">
-                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <Button variant="outline" className="h-10 rounded-full" onClick={() => setEditing(p)}>
-                <Pencil className="mr-2 h-4 w-4" /> Editar
-              </Button>
-              <Button
-                variant="outline"
-                disabled={del.isPending}
-                onClick={() => {
-                  if (confirm(`¿Eliminar el plan "${p.name}"?`)) del.mutate(p.id);
-                }}
-                className="h-10 rounded-full border-destructive/40 text-destructive"
+              <button
+                onClick={() => setOpen(expanded ? null : p.id)}
+                className="flex w-full items-center justify-between border-t px-4 py-3 text-left"
               >
-                <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-              </Button>
+                <span className="text-sm text-muted-foreground">
+                  {count} beneficio{count === 1 ? "" : "s"} incluido{count === 1 ? "" : "s"}
+                </span>
+                <span className="flex items-center gap-1 text-sm font-semibold text-primary">
+                  {expanded && "Ver menos"}
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform",
+                      expanded ? "rotate-180 text-primary" : "text-muted-foreground",
+                    )}
+                  />
+                </span>
+              </button>
+
+              {expanded && count > 0 && (
+                <div className="px-4 pb-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Beneficios incluidos
+                  </p>
+                  <ul className="mt-2 space-y-1.5">
+                    {p.benefits!.map((b, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs">
+                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <PlanDialog
         open={creating || !!editing}
         plan={editing}
+        onDelete={(id) => del.mutate(id)}
         onOpenChange={(v) => {
           if (!v) {
             setCreating(false);
@@ -139,10 +247,12 @@ function PlanDialog({
   open,
   plan,
   onOpenChange,
+  onDelete,
 }: {
   open: boolean;
   plan: Plan | null;
   onOpenChange: (v: boolean) => void;
+  onDelete: (id: string) => void;
 }) {
   const qc = useQueryClient();
   const [f, setF] = useState(empty);
@@ -160,6 +270,7 @@ function PlanDialog({
             price: String(plan.price),
             duration_days: String(plan.duration_days),
             benefits: plan.benefits ?? [],
+            is_active: plan.is_active,
           }
         : empty,
     );
@@ -173,6 +284,7 @@ function PlanDialog({
         price: Number(f.price),
         duration_days: Number(f.duration_days),
         benefits: f.benefits,
+        is_active: f.is_active,
       };
       const { error } = plan
         ? await supabase.from("plans").update(payload).eq("id", plan.id)
@@ -240,6 +352,16 @@ function PlanDialog({
             </div>
           </div>
 
+          <div className="flex items-center justify-between rounded-xl bg-secondary px-3 py-2.5">
+            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              Estado
+            </Label>
+            <Switch
+              checked={f.is_active}
+              onCheckedChange={(v) => setF((s) => ({ ...s, is_active: v }))}
+            />
+          </div>
+
           <div>
             <Label>Beneficios incluidos (opcional)</Label>
             <div className="mt-1 flex gap-2">
@@ -278,6 +400,23 @@ function PlanDialog({
           <Button type="submit" disabled={mut.isPending} className="h-11 w-full rounded-full font-semibold">
             Guardar
           </Button>
+
+          {plan && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full rounded-full border-destructive/40 font-semibold text-destructive"
+              onClick={() => {
+                if (confirm(`¿Eliminar el plan "${plan.name}"?`)) {
+                  onDelete(plan.id);
+                  setKey(null);
+                  onOpenChange(false);
+                }
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Eliminar plan
+            </Button>
+          )}
         </form>
       </DialogContent>
     </Dialog>
