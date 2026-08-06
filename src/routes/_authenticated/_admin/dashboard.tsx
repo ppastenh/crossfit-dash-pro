@@ -27,36 +27,48 @@ function useDashboardStats() {
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
       const today = format(new Date(), "yyyy-MM-dd");
-      const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
       const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
       const in7days = format(addDays(new Date(), 7), "yyyy-MM-dd");
 
-      const [active, todayClasses, monthRevenue, newWeek, expiring, allClassesToday, attendees] = await Promise.all([
+      const [total, active, todayClasses, monthRevenue, expiring] = await Promise.all([
+        supabase.from("members").select("id", { count: "exact", head: true }),
         supabase.from("members").select("id", { count: "exact", head: true }).eq("status", "activo"),
         supabase.from("classes").select("id", { count: "exact", head: true }).eq("class_date", today),
         supabase.from("payments").select("amount").eq("status", "pagado").gte("paid_at", monthStart),
-        supabase.from("members").select("id", { count: "exact", head: true }).gte("created_at", weekStart),
         supabase.from("members").select("id", { count: "exact", head: true }).lte("next_payment", in7days).gte("next_payment", today),
-        supabase.from("classes").select("id, capacity").eq("class_date", today),
-        supabase.from("class_attendees").select("class_id", { count: "exact", head: true }).in("status", ["inscrito", "asistio"]),
       ]);
 
       const revenue = (monthRevenue.data ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0);
-      const totalCap = (allClassesToday.data ?? []).reduce((s, r) => s + (r.capacity ?? 0), 0);
-      const totalReg = attendees.count ?? 0;
-      const occupancy = totalCap > 0 ? Math.round((totalReg / totalCap) * 100) : 0;
 
       return {
+        total: total.count ?? 0,
         active: active.count ?? 0,
         todayClasses: todayClasses.count ?? 0,
         revenue,
-        newWeek: newWeek.count ?? 0,
-        occupancy,
         expiring: expiring.count ?? 0,
       };
     },
   });
 }
+
+function useExpiringMembers(enabled: boolean) {
+  return useQuery({
+    enabled,
+    queryKey: ["expiring-members"],
+    queryFn: async () => {
+      const today = format(new Date(), "yyyy-MM-dd");
+      const in7days = format(addDays(new Date(), 7), "yyyy-MM-dd");
+      const { data } = await supabase
+        .from("members")
+        .select("id, full_name, status, next_payment, plans(name)")
+        .gte("next_payment", today)
+        .lte("next_payment", in7days)
+        .order("next_payment", { ascending: true });
+      return data ?? [];
+    },
+  });
+}
+
 
 function useUpcomingClasses() {
   return useQuery({
