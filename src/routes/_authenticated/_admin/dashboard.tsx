@@ -3,9 +3,12 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { MetricCard } from "@/components/admin/MetricCard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, CalendarDays, DollarSign, UserPlus, Activity, AlertTriangle, Plus, ClipboardCheck, CreditCard, Dumbbell } from "lucide-react";
-import { format, startOfWeek, startOfMonth, addDays } from "date-fns";
+import { Users, CalendarDays, DollarSign, AlertTriangle, Plus, CreditCard, Dumbbell, UserPlus, ChevronRight, Megaphone } from "lucide-react";
+import { format, startOfMonth, addDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 
 export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
   head: () => ({
@@ -24,36 +27,48 @@ function useDashboardStats() {
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
       const today = format(new Date(), "yyyy-MM-dd");
-      const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
       const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
       const in7days = format(addDays(new Date(), 7), "yyyy-MM-dd");
 
-      const [active, todayClasses, monthRevenue, newWeek, expiring, allClassesToday, attendees] = await Promise.all([
+      const [total, active, todayClasses, monthRevenue, expiring] = await Promise.all([
+        supabase.from("members").select("id", { count: "exact", head: true }),
         supabase.from("members").select("id", { count: "exact", head: true }).eq("status", "activo"),
         supabase.from("classes").select("id", { count: "exact", head: true }).eq("class_date", today),
         supabase.from("payments").select("amount").eq("status", "pagado").gte("paid_at", monthStart),
-        supabase.from("members").select("id", { count: "exact", head: true }).gte("created_at", weekStart),
         supabase.from("members").select("id", { count: "exact", head: true }).lte("next_payment", in7days).gte("next_payment", today),
-        supabase.from("classes").select("id, capacity").eq("class_date", today),
-        supabase.from("class_attendees").select("class_id", { count: "exact", head: true }).in("status", ["inscrito", "asistio"]),
       ]);
 
       const revenue = (monthRevenue.data ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0);
-      const totalCap = (allClassesToday.data ?? []).reduce((s, r) => s + (r.capacity ?? 0), 0);
-      const totalReg = attendees.count ?? 0;
-      const occupancy = totalCap > 0 ? Math.round((totalReg / totalCap) * 100) : 0;
 
       return {
+        total: total.count ?? 0,
         active: active.count ?? 0,
         todayClasses: todayClasses.count ?? 0,
         revenue,
-        newWeek: newWeek.count ?? 0,
-        occupancy,
         expiring: expiring.count ?? 0,
       };
     },
   });
 }
+
+function useExpiringMembers(enabled: boolean) {
+  return useQuery({
+    enabled,
+    queryKey: ["expiring-members"],
+    queryFn: async () => {
+      const today = format(new Date(), "yyyy-MM-dd");
+      const in7days = format(addDays(new Date(), 7), "yyyy-MM-dd");
+      const { data } = await supabase
+        .from("members")
+        .select("id, full_name, status, next_payment, plans(name)")
+        .gte("next_payment", today)
+        .lte("next_payment", in7days)
+        .order("next_payment", { ascending: true });
+      return data ?? [];
+    },
+  });
+}
+
 
 function useUpcomingClasses() {
   return useQuery({
@@ -74,6 +89,8 @@ function useUpcomingClasses() {
 function DashboardPage() {
   const stats = useDashboardStats();
   const upcoming = useUpcomingClasses();
+  const [expOpen, setExpOpen] = useState(false);
+  const expiring = useExpiringMembers(expOpen);
   const s = stats.data;
 
   return (
@@ -87,13 +104,65 @@ function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <MetricCard icon={Users} label="Miembros activos" value={s?.active ?? "—"} accent />
+        <MetricCard icon={Users} label="Total de alumnos" value={s?.total ?? "—"} accent />
+        <MetricCard icon={Users} label="Miembros activos" value={s?.active ?? "—"} />
         <MetricCard icon={CalendarDays} label="Clases hoy" value={s?.todayClasses ?? "—"} />
         <MetricCard icon={DollarSign} label="Ingresos del mes" value={s ? `$${s.revenue.toLocaleString()}` : "—"} />
-        <MetricCard icon={UserPlus} label="Nuevos esta semana" value={s?.newWeek ?? "—"} />
-        <MetricCard icon={Activity} label="Ocupación prom." value={s ? `${s.occupancy}%` : "—"} />
-        <MetricCard icon={AlertTriangle} label="Por vencer" value={s?.expiring ?? "—"} hint="Próximos 7 días" />
       </div>
+
+      <button
+        onClick={() => setExpOpen(true)}
+        className="mt-3 flex w-full items-center gap-3 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-4 text-left active:scale-[0.99] transition-transform"
+      >
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-500/20 text-amber-400">
+          <AlertTriangle className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-bold">Por vencer</div>
+          <div className="text-[11px] text-muted-foreground">Próximos 7 días · toca para ver la lista</div>
+        </div>
+        <div className="text-xl font-black">{s?.expiring ?? "—"}</div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </button>
+
+      <Dialog open={expOpen} onOpenChange={setExpOpen}>
+        <DialogContent className="max-w-[92vw] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>Membresías por vencer</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+            {expiring.isLoading && <p className="text-xs text-muted-foreground">Cargando…</p>}
+            {!expiring.isLoading && (expiring.data ?? []).length === 0 && (
+              <p className="rounded-2xl border border-dashed p-4 text-center text-xs text-muted-foreground">
+                No hay membresías por vencer en los próximos 7 días
+              </p>
+            )}
+            {(expiring.data ?? []).map((m) => (
+              <Link
+                key={m.id}
+                to="/members/$id"
+                params={{ id: m.id }}
+                onClick={() => setExpOpen(false)}
+                className="flex items-center gap-3 rounded-2xl border bg-card p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{m.full_name}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {(m as { plans?: { name?: string } | null }).plans?.name ?? "Sin plan"}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-xs font-bold text-amber-400">
+                    {m.next_payment ? format(new Date(`${m.next_payment}T00:00:00`), "d MMM", { locale: es }) : "—"}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">vence</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       <section className="mt-6">
         <div className="mb-3 flex items-center justify-between">
@@ -140,7 +209,7 @@ function DashboardPage() {
           <QuickAction to="/members" icon={UserPlus} label="Agregar miembro" />
           <QuickAction to="/classes" icon={CalendarDays} label="Crear clase" />
           <QuickAction to="/finances" icon={CreditCard} label="Registrar pago" />
-          <QuickAction to="/attendance" icon={ClipboardCheck} label="Asistencia" />
+          <QuickAction to="/more/notifications" icon={Megaphone} label="Enviar aviso" />
         </div>
       </section>
     </AdminShell>
