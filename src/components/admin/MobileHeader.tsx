@@ -33,7 +33,9 @@ export function MobileHeader({ title, showBack, right }: Props) {
         )}
         {title && <h1 className="min-w-0 flex-1 truncate text-base font-semibold">{title}</h1>}
         {!title && <div className="flex-1" />}
+        <NotificationsBell />
         {right}
+
       </div>
     </header>
   );
