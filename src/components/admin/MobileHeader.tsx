@@ -1,6 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronLeft, Dumbbell } from "lucide-react";
 import type { ReactNode } from "react";
+import { NotificationsBell } from "./NotificationsBell";
+
 
 type Props = {
   title?: string;
