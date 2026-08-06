@@ -209,7 +209,7 @@ function DashboardPage() {
           <QuickAction to="/members" icon={UserPlus} label="Agregar miembro" />
           <QuickAction to="/classes" icon={CalendarDays} label="Crear clase" />
           <QuickAction to="/finances" icon={CreditCard} label="Registrar pago" />
-          <QuickAction to="/attendance" icon={ClipboardCheck} label="Asistencia" />
+          <QuickAction to="/more/notifications" icon={Megaphone} label="Enviar aviso" />
         </div>
       </section>
     </AdminShell>
