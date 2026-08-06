@@ -89,6 +89,8 @@ function useUpcomingClasses() {
 function DashboardPage() {
   const stats = useDashboardStats();
   const upcoming = useUpcomingClasses();
+  const [expOpen, setExpOpen] = useState(false);
+  const expiring = useExpiringMembers(expOpen);
   const s = stats.data;
 
   return (
@@ -102,13 +104,65 @@ function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <MetricCard icon={Users} label="Miembros activos" value={s?.active ?? "—"} accent />
+        <MetricCard icon={Users} label="Total de alumnos" value={s?.total ?? "—"} accent />
+        <MetricCard icon={Users} label="Miembros activos" value={s?.active ?? "—"} />
         <MetricCard icon={CalendarDays} label="Clases hoy" value={s?.todayClasses ?? "—"} />
         <MetricCard icon={DollarSign} label="Ingresos del mes" value={s ? `$${s.revenue.toLocaleString()}` : "—"} />
-        <MetricCard icon={UserPlus} label="Nuevos esta semana" value={s?.newWeek ?? "—"} />
-        <MetricCard icon={Activity} label="Ocupación prom." value={s ? `${s.occupancy}%` : "—"} />
-        <MetricCard icon={AlertTriangle} label="Por vencer" value={s?.expiring ?? "—"} hint="Próximos 7 días" />
       </div>
+
+      <button
+        onClick={() => setExpOpen(true)}
+        className="mt-3 flex w-full items-center gap-3 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-4 text-left active:scale-[0.99] transition-transform"
+      >
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-500/20 text-amber-400">
+          <AlertTriangle className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-bold">Por vencer</div>
+          <div className="text-[11px] text-muted-foreground">Próximos 7 días · toca para ver la lista</div>
+        </div>
+        <div className="text-xl font-black">{s?.expiring ?? "—"}</div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </button>
+
+      <Dialog open={expOpen} onOpenChange={setExpOpen}>
+        <DialogContent className="max-w-[92vw] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>Membresías por vencer</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+            {expiring.isLoading && <p className="text-xs text-muted-foreground">Cargando…</p>}
+            {!expiring.isLoading && (expiring.data ?? []).length === 0 && (
+              <p className="rounded-2xl border border-dashed p-4 text-center text-xs text-muted-foreground">
+                No hay membresías por vencer en los próximos 7 días
+              </p>
+            )}
+            {(expiring.data ?? []).map((m) => (
+              <Link
+                key={m.id}
+                to="/members/$id"
+                params={{ id: m.id }}
+                onClick={() => setExpOpen(false)}
+                className="flex items-center gap-3 rounded-2xl border bg-card p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{m.full_name}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {(m as { plans?: { name?: string } | null }).plans?.name ?? "Sin plan"}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-xs font-bold text-amber-400">
+                    {m.next_payment ? format(new Date(`${m.next_payment}T00:00:00`), "d MMM", { locale: es }) : "—"}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">vence</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       <section className="mt-6">
         <div className="mb-3 flex items-center justify-between">
