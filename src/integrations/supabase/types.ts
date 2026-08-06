@@ -50,6 +50,77 @@ export type Database = {
         }
         Relationships: []
       }
+      announcement_reads: {
+        Row: {
+          announcement_id: string
+          id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          id?: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          banner_days: number
+          body: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          image_url: string | null
+          send_push: boolean
+          show_banner: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          banner_days?: number
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          send_push?: boolean
+          show_banner?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          banner_days?: number
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          send_push?: boolean
+          show_banner?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attendance: {
         Row: {
           checked_in_at: string
