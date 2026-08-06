@@ -3,9 +3,12 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { MetricCard } from "@/components/admin/MetricCard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, CalendarDays, DollarSign, UserPlus, Activity, AlertTriangle, Plus, ClipboardCheck, CreditCard, Dumbbell } from "lucide-react";
-import { format, startOfWeek, startOfMonth, addDays } from "date-fns";
+import { Users, CalendarDays, DollarSign, AlertTriangle, Plus, CreditCard, Dumbbell, UserPlus, ChevronRight, Megaphone } from "lucide-react";
+import { format, startOfMonth, addDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 
 export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
   head: () => ({
