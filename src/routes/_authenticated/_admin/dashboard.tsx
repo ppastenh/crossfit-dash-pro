@@ -30,8 +30,8 @@ function useDashboardStats() {
       const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
       const in7days = format(addDays(new Date(), 7), "yyyy-MM-dd");
 
-      const [total, active, todayClasses, monthRevenue, expiring] = await Promise.all([
-        supabase.from("members").select("id", { count: "exact", head: true }),
+      const [newThisMonth, active, todayClasses, monthRevenue, expiring] = await Promise.all([
+        supabase.from("members").select("id", { count: "exact", head: true }).gte("join_date", monthStart),
         supabase.from("members").select("id", { count: "exact", head: true }).eq("status", "activo"),
         supabase.from("classes").select("id", { count: "exact", head: true }).eq("class_date", today),
         supabase.from("payments").select("amount").eq("status", "pagado").gte("paid_at", monthStart),
@@ -41,7 +41,7 @@ function useDashboardStats() {
       const revenue = (monthRevenue.data ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0);
 
       return {
-        total: total.count ?? 0,
+        newThisMonth: newThisMonth.count ?? 0,
         active: active.count ?? 0,
         todayClasses: todayClasses.count ?? 0,
         revenue,
@@ -104,8 +104,8 @@ function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <MetricCard icon={Users} label="Total de alumnos" value={s?.total ?? "—"} accent />
-        <MetricCard icon={Users} label="Miembros activos" value={s?.active ?? "—"} />
+        <MetricCard icon={Users} label="Miembros activos" value={s?.active ?? "—"} accent />
+        <MetricCard icon={UserPlus} label="Nuevos este mes" value={s?.newThisMonth ?? "—"} />
         <MetricCard icon={CalendarDays} label="Clases hoy" value={s?.todayClasses ?? "—"} />
         <MetricCard icon={DollarSign} label="Ingresos del mes" value={s ? `$${s.revenue.toLocaleString()}` : "—"} />
       </div>
