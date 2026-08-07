@@ -88,6 +88,7 @@ function NotificationsPage() {
     onSuccess: () => {
       toast.success("Aviso enviado");
       setTitle(""); setBody(""); setFile(null); setPreview(null); setPush(true); setBanner(true); setDays(3);
+      setCategory("clase"); setTopic(""); setCustomTopic("");
       if (fileRef.current) fileRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["announcements"] });
     },
