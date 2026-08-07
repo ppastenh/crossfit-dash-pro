@@ -121,6 +121,54 @@ function NotificationsPage() {
             <Input id="an-title" value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Cambio de horario el viernes" />
           </div>
 
+          <div className="space-y-2">
+            <Label>Categoría</Label>
+            <div className="flex gap-2">
+              {(["clase", "evento"] as AnnouncementCategory[]).map((c) => (
+                <button
+                  key={c}
+                  onClick={() => { setCategory(c); setTopic(""); setCustomTopic(""); }}
+                  className={`flex-1 rounded-full border px-3 py-2 text-xs font-bold capitalize ${
+                    category === c ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {c === "clase" ? "Clase" : "Evento"}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {topicOptions.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTopic(t)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                    topic === t ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+              <button
+                onClick={() => setTopic("otro")}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                  topic === "otro" ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"
+                }`}
+              >
+                Otro…
+              </button>
+            </div>
+            {topic === "otro" && (
+              <Input
+                value={customTopic}
+                maxLength={60}
+                onChange={(e) => setCustomTopic(e.target.value)}
+                placeholder={category === "clase" ? "Escribe la clase" : "Escribe el evento"}
+              />
+            )}
+          </div>
+
+
+
           <div className="space-y-1.5">
             <Label htmlFor="an-body">Descripción</Label>
             <Textarea id="an-body" value={body} maxLength={1000} rows={4} onChange={(e) => setBody(e.target.value)} placeholder="Detalle del aviso (opcional)" />
