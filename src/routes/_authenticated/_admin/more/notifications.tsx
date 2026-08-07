@@ -10,7 +10,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ImagePlus, Megaphone, Send, Trash2, X } from "lucide-react";
 import { AnnouncementImage } from "@/components/admin/NotificationsBell";
-import { fetchAnnouncements, formatDate, isExpired, tryLocalPush } from "@/lib/announcements";
+import {
+  fetchAnnouncements,
+  formatDate,
+  isExpired,
+  tryLocalPush,
+  CLASS_TOPICS,
+  EVENT_TOPICS,
+  type AnnouncementCategory,
+} from "@/lib/announcements";
 
 export const Route = createFileRoute("/_authenticated/_admin/more/notifications")({
   head: () => ({
