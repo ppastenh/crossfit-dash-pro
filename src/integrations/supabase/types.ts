@@ -83,6 +83,7 @@ export type Database = {
         Row: {
           banner_days: number
           body: string | null
+          category: string
           created_at: string
           created_by: string | null
           expires_at: string | null
@@ -91,11 +92,13 @@ export type Database = {
           send_push: boolean
           show_banner: boolean
           title: string
+          topic: string | null
           updated_at: string
         }
         Insert: {
           banner_days?: number
           body?: string | null
+          category?: string
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
@@ -104,11 +107,13 @@ export type Database = {
           send_push?: boolean
           show_banner?: boolean
           title: string
+          topic?: string | null
           updated_at?: string
         }
         Update: {
           banner_days?: number
           body?: string | null
+          category?: string
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
@@ -117,6 +122,7 @@ export type Database = {
           send_push?: boolean
           show_banner?: boolean
           title?: string
+          topic?: string | null
           updated_at?: string
         }
         Relationships: []
