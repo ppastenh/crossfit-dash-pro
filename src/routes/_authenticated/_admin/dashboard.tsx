@@ -165,6 +165,16 @@ function DashboardPage() {
 
 
       <section className="mt-6">
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">Acciones rápidas</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <QuickAction to="/members" icon={UserPlus} label="Agregar miembro" />
+          <QuickAction to="/classes" icon={CalendarDays} label="Crear clase" />
+          <QuickAction to="/finances" icon={CreditCard} label="Registrar pago" />
+          <QuickAction to="/more/notifications" icon={Megaphone} label="Enviar aviso" />
+        </div>
+      </section>
+
+      <section className="mt-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Próximas clases</h2>
           <Link to="/classes" className="text-xs font-semibold text-primary">Ver todas</Link>
@@ -203,15 +213,6 @@ function DashboardPage() {
         </div>
       </section>
 
-      <section className="mt-6">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">Acciones rápidas</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <QuickAction to="/members" icon={UserPlus} label="Agregar miembro" />
-          <QuickAction to="/classes" icon={CalendarDays} label="Crear clase" />
-          <QuickAction to="/finances" icon={CreditCard} label="Registrar pago" />
-          <QuickAction to="/more/notifications" icon={Megaphone} label="Enviar aviso" />
-        </div>
-      </section>
     </AdminShell>
   );
 }
