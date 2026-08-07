@@ -81,6 +81,8 @@ function NotificationsPage() {
         banner_days: days,
         expires_at: expires,
         created_by: uid,
+        category,
+        topic: finalTopic || null,
       });
       if (error) throw error;
       if (push) await tryLocalPush(title.trim(), body.trim() || null);
