@@ -257,6 +257,9 @@ function NotificationsPage() {
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isExpired(a) ? "bg-secondary text-muted-foreground" : "bg-primary/15 text-primary"}`}>
                         {isExpired(a) ? "Expirado" : "Activo"}
                       </span>
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] capitalize">
+                        {a.category === "evento" ? "Evento" : "Clase"}{a.topic ? ` · ${a.topic}` : ""}
+                      </span>
                       {a.send_push && <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px]">Push</span>}
                       {a.show_banner && <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px]">Banner {a.banner_days}d</span>}
                       <span className="text-[10px] text-muted-foreground">{formatDate(a.created_at)}</span>
