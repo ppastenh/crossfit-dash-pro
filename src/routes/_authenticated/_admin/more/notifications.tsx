@@ -15,9 +15,6 @@ import {
   formatDate,
   isExpired,
   tryLocalPush,
-  CLASS_TOPICS,
-  EVENT_TOPICS,
-  type AnnouncementCategory,
 } from "@/lib/announcements";
 
 export const Route = createFileRoute("/_authenticated/_admin/more/notifications")({
