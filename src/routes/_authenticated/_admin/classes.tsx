@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
+import { CLASS_TOPICS, EVENT_TOPICS, type ClassCategory } from "@/lib/class-topics";
 import {
   format, addDays, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
   addMonths, isSameDay, isSameMonth,
@@ -418,6 +419,8 @@ function AddClassFab({ defaultDate }: { defaultDate: string }) {
     level: "todos" as string,
     coach_id: "",
   });
+  const [category, setCategory] = useState<ClassCategory>("clase");
+  const [customName, setCustomName] = useState("");
   const [repeatWeekly, setRepeatWeekly] = useState(false);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [weeksAhead, setWeeksAhead] = useState(8);
@@ -446,7 +449,7 @@ function AddClassFab({ defaultDate }: { defaultDate: string }) {
     mutationFn: async () => {
       const base = parseISO(form.class_date);
       const common = {
-        name: form.name,
+        name: form.name === "otro" ? customName.trim() : form.name,
         start_time: form.start_time,
         duration_minutes: form.duration_minutes,
         capacity: form.capacity,
@@ -489,7 +492,55 @@ function AddClassFab({ defaultDate }: { defaultDate: string }) {
       <DialogContent className="max-w-sm rounded-3xl">
         <DialogHeader><DialogTitle>Nueva clase</DialogTitle></DialogHeader>
         <form onSubmit={(e) => { e.preventDefault(); mut.mutate(); }} className="space-y-3">
-          <div><Label>WOD / Nombre</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div className="space-y-2">
+            <Label>Categoría</Label>
+            <div className="flex gap-2">
+              {(["clase", "evento"] as ClassCategory[]).map((c) => (
+                <button
+                  type="button"
+                  key={c}
+                  onClick={() => { setCategory(c); setForm((f) => ({ ...f, name: "" })); setCustomName(""); }}
+                  className={`flex-1 rounded-full border px-3 py-2 text-xs font-bold ${
+                    category === c ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {c === "clase" ? "Clase" : "Evento"}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {(category === "clase" ? CLASS_TOPICS : EVENT_TOPICS).map((t) => (
+                <button
+                  type="button"
+                  key={t}
+                  onClick={() => { setForm((f) => ({ ...f, name: t })); setCustomName(""); }}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                    form.name === t ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, name: "otro" }))}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                  form.name === "otro" ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"
+                }`}
+              >
+                Otro…
+              </button>
+            </div>
+            {form.name === "otro" && (
+              <Input
+                required
+                maxLength={60}
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder={category === "clase" ? "Escribe la clase" : "Escribe el evento"}
+              />
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Fecha</Label><Input type="date" value={form.class_date} onChange={(e) => setForm({ ...form, class_date: e.target.value })} /></div>
             <div><Label>Hora</Label><Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} /></div>

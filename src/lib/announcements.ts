@@ -1,19 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AnnouncementCategory = "clase" | "evento";
-
-export const CLASS_TOPICS = [
-  "Crossfit",
-  "Gap",
-  "Hyrox",
-  "Halterofilia",
-  "Strength",
-  "Gymnastics",
-  "Open Box",
-] as const;
-
-export const EVENT_TOPICS = ["Clínica", "Competencia", "Clase especial"] as const;
-
 export type Announcement = {
   id: string;
   title: string;
@@ -24,14 +10,12 @@ export type Announcement = {
   banner_days: number;
   expires_at: string | null;
   created_at: string;
-  category: string;
-  topic: string | null;
 };
 
 export async function fetchAnnouncements(): Promise<Announcement[]> {
   const { data, error } = await supabase
     .from("announcements")
-    .select("id,title,body,image_url,send_push,show_banner,banner_days,expires_at,created_at,category,topic")
+    .select("id,title,body,image_url,send_push,show_banner,banner_days,expires_at,created_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Announcement[];
