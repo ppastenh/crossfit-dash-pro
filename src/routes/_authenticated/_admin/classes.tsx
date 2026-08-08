@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
+import { CLASS_TOPICS, EVENT_TOPICS, type ClassCategory } from "@/lib/class-topics";
 import {
   format, addDays, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
   addMonths, isSameDay, isSameMonth,
