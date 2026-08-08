@@ -78,8 +78,6 @@ function NotificationsPage() {
         banner_days: days,
         expires_at: expires,
         created_by: uid,
-        category,
-        topic: finalTopic || null,
       });
       if (error) throw error;
       if (push) await tryLocalPush(title.trim(), body.trim() || null);
@@ -87,7 +85,6 @@ function NotificationsPage() {
     onSuccess: () => {
       toast.success("Aviso enviado");
       setTitle(""); setBody(""); setFile(null); setPreview(null); setPush(true); setBanner(true); setDays(3);
-      setCategory("clase"); setTopic(""); setCustomTopic("");
       if (fileRef.current) fileRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["announcements"] });
     },
@@ -121,51 +118,8 @@ function NotificationsPage() {
             <Input id="an-title" value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Cambio de horario el viernes" />
           </div>
 
-          <div className="space-y-2">
-            <Label>Categoría</Label>
-            <div className="flex gap-2">
-              {(["clase", "evento"] as AnnouncementCategory[]).map((c) => (
-                <button
-                  key={c}
-                  onClick={() => { setCategory(c); setTopic(""); setCustomTopic(""); }}
-                  className={`flex-1 rounded-full border px-3 py-2 text-xs font-bold capitalize ${
-                    category === c ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"
-                  }`}
-                >
-                  {c === "clase" ? "Clase" : "Evento"}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {topicOptions.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTopic(t)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                    topic === t ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-              <button
-                onClick={() => setTopic("otro")}
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                  topic === "otro" ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"
-                }`}
-              >
-                Otro…
-              </button>
-            </div>
-            {topic === "otro" && (
-              <Input
-                value={customTopic}
-                maxLength={60}
-                onChange={(e) => setCustomTopic(e.target.value)}
-                placeholder={category === "clase" ? "Escribe la clase" : "Escribe el evento"}
-              />
-            )}
-          </div>
+
+
 
 
 
@@ -247,9 +201,6 @@ function NotificationsPage() {
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isExpired(a) ? "bg-secondary text-muted-foreground" : "bg-primary/15 text-primary"}`}>
                         {isExpired(a) ? "Expirado" : "Activo"}
-                      </span>
-                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] capitalize">
-                        {a.category === "evento" ? "Evento" : "Clase"}{a.topic ? ` · ${a.topic}` : ""}
                       </span>
                       {a.send_push && <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px]">Push</span>}
                       {a.show_banner && <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px]">Banner {a.banner_days}d</span>}
