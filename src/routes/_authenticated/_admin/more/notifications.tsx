@@ -42,12 +42,6 @@ function NotificationsPage() {
   const [push, setPush] = useState(true);
   const [banner, setBanner] = useState(true);
   const [days, setDays] = useState(3);
-  const [category, setCategory] = useState<AnnouncementCategory>("clase");
-  const [topic, setTopic] = useState<string>("");
-  const [customTopic, setCustomTopic] = useState("");
-
-  const topicOptions: readonly string[] = category === "clase" ? CLASS_TOPICS : EVENT_TOPICS;
-  const finalTopic = topic === "otro" ? customTopic.trim() : topic;
 
   const { data: items = [], isLoading } = useQuery({ queryKey: ["announcements"], queryFn: fetchAnnouncements });
 
