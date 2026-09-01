@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
 import { Plus, UserCog, ShieldCheck, Pause, Play, Trash2, Mail } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,7 @@ type Permissions = Record<string, boolean>;
 
 type Coach = {
   id: string;
-  full_name: string;
+  name: string;
   email: string | null;
   phone: string | null;
   specialty: string | null;
@@ -65,10 +66,11 @@ const COACH_DEFAULT_PERMISSIONS: Permissions = {
 };
 
 function CoachesPage() {
+  const { boxId } = useBox();
   const coaches = useQuery({
-    queryKey: ["coaches"],
+    queryKey: ["coaches", boxId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("coaches").select("*").order("full_name");
+      const { data, error } = await supabase.from("coaches").select("*").eq("box_id", boxId).order("name");
       if (error) throw error;
       return (data ?? []) as unknown as Coach[];
     },
@@ -94,13 +96,14 @@ function CoachesPage() {
 
 function CoachCard({ coach }: { coach: Coach }) {
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const perms = coach.permissions ?? {};
   const granted = PERMISSIONS.filter((p) => perms[p.key]).length;
   const paused = coach.status === "pausado";
 
   const update = useMutation({
     mutationFn: async (patch: { status?: string }) => {
-      const { error } = await supabase.from("coaches").update(patch).eq("id", coach.id);
+      const { error } = await supabase.from("coaches").update(patch).eq("box_id", boxId).eq("id", coach.id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["coaches"] }),
@@ -109,7 +112,7 @@ function CoachCard({ coach }: { coach: Coach }) {
 
   const remove = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("coaches").delete().eq("id", coach.id);
+      const { error } = await supabase.from("coaches").delete().eq("box_id", boxId).eq("id", coach.id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Coach eliminado"); qc.invalidateQueries({ queryKey: ["coaches"] }); },
@@ -122,7 +125,7 @@ function CoachCard({ coach }: { coach: Coach }) {
         <div className="grid h-11 w-11 place-items-center rounded-full bg-secondary"><UserCog className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-semibold">{coach.full_name}</p>
+            <p className="truncate text-sm font-semibold">{coach.name}</p>
             {paused && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Pausado</span>}
             {coach.user_id && <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary">Vinculado</span>}
           </div>
@@ -132,7 +135,7 @@ function CoachCard({ coach }: { coach: Coach }) {
 
       <div className="mt-3 flex items-center gap-2">
         <PermissionsDialog coach={coach} granted={granted} />
-        
+
         <button
           onClick={() => update.mutate({ status: paused ? "activo" : "pausado" })}
           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary active:bg-secondary/70"
@@ -154,12 +157,13 @@ function CoachCard({ coach }: { coach: Coach }) {
 
 function PermissionsDialog({ coach, granted }: { coach: Coach; granted: number }) {
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const [open, setOpen] = useState(false);
   const [perms, setPerms] = useState<Permissions>(coach.permissions ?? {});
 
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("coaches").update({ permissions: perms }).eq("id", coach.id);
+      const { error } = await supabase.from("coaches").update({ permissions: perms }).eq("box_id", boxId).eq("id", coach.id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Permisos actualizados"); qc.invalidateQueries({ queryKey: ["coaches"] }); setOpen(false); },
@@ -175,7 +179,7 @@ function PermissionsDialog({ coach, granted }: { coach: Coach; granted: number }
         </button>
       </DialogTrigger>
       <DialogContent className="max-h-[85dvh] max-w-sm overflow-y-auto rounded-3xl">
-        <DialogHeader><DialogTitle>Permisos de {coach.full_name}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Permisos de {coach.name}</DialogTitle></DialogHeader>
         <div className="divide-y divide-border/60">
           {PERMISSIONS.map((p) => (
             <div key={p.key} className="flex items-start gap-3 py-3">
@@ -199,29 +203,43 @@ function PermissionsDialog({ coach, granted }: { coach: Coach; granted: number }
 }
 
 
+type CandidateRow = {
+  user_id: string;
+  phone: string | null;
+  wodplace_users: { name: string; email: string } | null;
+};
+type Candidate = { user_id: string; name: string; email: string | null; phone: string | null };
+
 function AddCoach({ variant }: { variant?: "cta" }) {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const [q, setQ] = useState("");
   const [specialty, setSpecialty] = useState<Record<string, string>>({});
 
   const members = useQuery({
-    queryKey: ["members-for-coach"],
+    queryKey: ["members-for-coach", boxId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("members")
-        .select("id, full_name, email, phone")
-        .order("full_name");
+        .from("box_members")
+        .select("user_id, phone, wodplace_users!inner(name, email)")
+        .eq("box_id", boxId)
+        .order("name", { referencedTable: "wodplace_users" });
       if (error) throw error;
-      return data ?? [];
+      return ((data ?? []) as unknown as CandidateRow[]).map((r) => ({
+        user_id: r.user_id,
+        name: r.wodplace_users?.name ?? "—",
+        email: r.wodplace_users?.email ?? null,
+        phone: r.phone,
+      })) satisfies Candidate[];
     },
     enabled: open,
   });
 
   const existing = useQuery({
-    queryKey: ["coaches"],
+    queryKey: ["coaches", boxId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("coaches").select("email, full_name");
+      const { data, error } = await supabase.from("coaches").select("email, name").eq("box_id", boxId);
       if (error) throw error;
       return data ?? [];
     },
@@ -229,12 +247,13 @@ function AddCoach({ variant }: { variant?: "cta" }) {
   });
 
   const mut = useMutation({
-    mutationFn: async (m: { id: string; full_name: string; email: string | null; phone: string | null }) => {
+    mutationFn: async (m: Candidate) => {
       const { error } = await supabase.from("coaches").insert({
-        full_name: m.full_name,
+        box_id: boxId,
+        name: m.name,
         email: m.email,
         phone: m.phone,
-        specialty: specialty[m.id] || null,
+        specialty: specialty[m.user_id] || null,
         permissions: COACH_DEFAULT_PERMISSIONS,
       });
       if (error) throw error;
@@ -249,11 +268,11 @@ function AddCoach({ variant }: { variant?: "cta" }) {
   });
 
   const taken = new Set(
-    (existing.data ?? []).flatMap((c) => [c.email?.toLowerCase(), c.full_name?.toLowerCase()].filter(Boolean) as string[]),
+    (existing.data ?? []).flatMap((c) => [c.email?.toLowerCase(), c.name?.toLowerCase()].filter(Boolean) as string[]),
   );
 
   const list = (members.data ?? []).filter((m) =>
-    m.full_name.toLowerCase().includes(q.trim().toLowerCase()),
+    m.name.toLowerCase().includes(q.trim().toLowerCase()),
   );
 
   return (
@@ -277,15 +296,15 @@ function AddCoach({ variant }: { variant?: "cta" }) {
             <p className="py-4 text-center text-xs text-muted-foreground">No hay alumnos que coincidan.</p>
           )}
           {list.map((m) => {
-            const already = taken.has(m.full_name.toLowerCase()) || (!!m.email && taken.has(m.email.toLowerCase()));
+            const already = taken.has(m.name.toLowerCase()) || (!!m.email && taken.has(m.email.toLowerCase()));
             return (
-              <div key={m.id} className="rounded-2xl border bg-card p-3">
+              <div key={m.user_id} className="rounded-2xl border bg-card p-3">
                 <div className="flex items-center gap-3">
                   <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-secondary">
                     <UserCog className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{m.full_name}</p>
+                    <p className="truncate text-sm font-semibold">{m.name}</p>
                     <p className="truncate text-[11px] text-muted-foreground">{m.email || m.phone || "—"}</p>
                   </div>
                   <Button
@@ -301,8 +320,8 @@ function AddCoach({ variant }: { variant?: "cta" }) {
                   <Input
                     className="mt-2 h-9"
                     placeholder="Especialidad (opcional)"
-                    value={specialty[m.id] ?? ""}
-                    onChange={(e) => setSpecialty((s) => ({ ...s, [m.id]: e.target.value }))}
+                    value={specialty[m.user_id] ?? ""}
+                    onChange={(e) => setSpecialty((s) => ({ ...s, [m.user_id]: e.target.value }))}
                   />
                 )}
               </div>

@@ -9,34 +9,38 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/_admin'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as AuthenticatedAdminMembersRouteImport } from './routes/_authenticated/_admin/members'
-import { Route as AuthenticatedAdminFinancesRouteImport } from './routes/_authenticated/_admin/finances'
-import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/_admin/dashboard'
-import { Route as AuthenticatedAdminClassesRouteImport } from './routes/_authenticated/_admin/classes'
-import { Route as AuthenticatedAdminAttendanceRouteImport } from './routes/_authenticated/_admin/attendance'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/_admin'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
-import { Route as AuthenticatedAdminMoreIndexRouteImport } from './routes/_authenticated/_admin/more/index'
-import { Route as AuthenticatedAdminMoreSettingsRouteImport } from './routes/_authenticated/_admin/more/settings'
-import { Route as AuthenticatedAdminMoreReportsRouteImport } from './routes/_authenticated/_admin/more/reports'
-import { Route as AuthenticatedAdminMorePlansRouteImport } from './routes/_authenticated/_admin/more/plans'
-import { Route as AuthenticatedAdminMoreNotificationsRouteImport } from './routes/_authenticated/_admin/more/notifications'
-import { Route as AuthenticatedAdminMoreInvitesRouteImport } from './routes/_authenticated/_admin/more/invites'
-import { Route as AuthenticatedAdminMoreFilesRouteImport } from './routes/_authenticated/_admin/more/files'
-import { Route as AuthenticatedAdminMoreCoachesRouteImport } from './routes/_authenticated/_admin/more/coaches'
-import { Route as AuthenticatedAdminMembersIdRouteImport } from './routes/_authenticated/_admin/members.$id'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as AuthenticatedAdminAttendanceRouteImport } from './routes/_authenticated/_admin/attendance'
+import { Route as AuthenticatedAdminClassesRouteImport } from './routes/_authenticated/_admin/classes'
+import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/_admin/dashboard'
+import { Route as AuthenticatedAdminFinancesRouteImport } from './routes/_authenticated/_admin/finances'
+import { Route as AuthenticatedAdminMembersRouteImport } from './routes/_authenticated/_admin/members'
 import { Route as AuthenticatedAdminClassesIdRouteImport } from './routes/_authenticated/_admin/classes.$id'
+import { Route as AuthenticatedAdminMembersIdRouteImport } from './routes/_authenticated/_admin/members.$id'
+import { Route as AuthenticatedAdminMoreIndexRouteImport } from './routes/_authenticated/_admin/more/index'
+import { Route as AuthenticatedAdminMoreCoachesRouteImport } from './routes/_authenticated/_admin/more/coaches'
+import { Route as AuthenticatedAdminMoreFilesRouteImport } from './routes/_authenticated/_admin/more/files'
+import { Route as AuthenticatedAdminMoreInvitesRouteImport } from './routes/_authenticated/_admin/more/invites'
+import { Route as AuthenticatedAdminMoreNotificationsRouteImport } from './routes/_authenticated/_admin/more/notifications'
+import { Route as AuthenticatedAdminMorePlansRouteImport } from './routes/_authenticated/_admin/more/plans'
+import { Route as AuthenticatedAdminMoreReportsRouteImport } from './routes/_authenticated/_admin/more/reports'
+import { Route as AuthenticatedAdminMoreSettingsRouteImport } from './routes/_authenticated/_admin/more/settings'
 
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -44,47 +48,42 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/_admin',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const Char91DotmcpChar93ListToolsRoute =
   Char91DotmcpChar93ListToolsRouteImport.update({
     id: '/.mcp/list-tools',
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedAdminMembersRoute =
-  AuthenticatedAdminMembersRouteImport.update({
-    id: '/members',
-    path: '/members',
-    getParentRoute: () => AuthenticatedAdminRoute,
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedAdminFinancesRoute =
-  AuthenticatedAdminFinancesRouteImport.update({
-    id: '/finances',
-    path: '/finances',
-    getParentRoute: () => AuthenticatedAdminRoute,
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedAdminDashboardRoute =
-  AuthenticatedAdminDashboardRouteImport.update({
-    id: '/dashboard',
-    path: '/dashboard',
+const AuthenticatedAdminAttendanceRoute =
+  AuthenticatedAdminAttendanceRouteImport.update({
+    id: '/attendance',
+    path: '/attendance',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminClassesRoute =
@@ -93,63 +92,40 @@ const AuthenticatedAdminClassesRoute =
     path: '/classes',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminAttendanceRoute =
-  AuthenticatedAdminAttendanceRouteImport.update({
-    id: '/attendance',
-    path: '/attendance',
+const AuthenticatedAdminDashboardRoute =
+  AuthenticatedAdminDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const Char91DotmcpChar93InvokeToolToolRoute =
-  Char91DotmcpChar93InvokeToolToolRouteImport.update({
-    id: '/.mcp/invoke-tool/$tool',
-    path: '/.mcp/invoke-tool/$tool',
-    getParentRoute: () => rootRouteImport,
+const AuthenticatedAdminFinancesRoute =
+  AuthenticatedAdminFinancesRouteImport.update({
+    id: '/finances',
+    path: '/finances',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const AuthenticatedAdminMembersRoute =
+  AuthenticatedAdminMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminClassesIdRoute =
+  AuthenticatedAdminClassesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAdminClassesRoute,
+  } as any)
+const AuthenticatedAdminMembersIdRoute =
+  AuthenticatedAdminMembersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAdminMembersRoute,
+  } as any)
 const AuthenticatedAdminMoreIndexRoute =
   AuthenticatedAdminMoreIndexRouteImport.update({
     id: '/more/',
     path: '/more/',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminMoreSettingsRoute =
-  AuthenticatedAdminMoreSettingsRouteImport.update({
-    id: '/more/settings',
-    path: '/more/settings',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminMoreReportsRoute =
-  AuthenticatedAdminMoreReportsRouteImport.update({
-    id: '/more/reports',
-    path: '/more/reports',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminMorePlansRoute =
-  AuthenticatedAdminMorePlansRouteImport.update({
-    id: '/more/plans',
-    path: '/more/plans',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminMoreNotificationsRoute =
-  AuthenticatedAdminMoreNotificationsRouteImport.update({
-    id: '/more/notifications',
-    path: '/more/notifications',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminMoreInvitesRoute =
-  AuthenticatedAdminMoreInvitesRouteImport.update({
-    id: '/more/invites',
-    path: '/more/invites',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminMoreFilesRoute =
-  AuthenticatedAdminMoreFilesRouteImport.update({
-    id: '/more/files',
-    path: '/more/files',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminMoreCoachesRoute =
@@ -158,17 +134,41 @@ const AuthenticatedAdminMoreCoachesRoute =
     path: '/more/coaches',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminMembersIdRoute =
-  AuthenticatedAdminMembersIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedAdminMembersRoute,
+const AuthenticatedAdminMoreFilesRoute =
+  AuthenticatedAdminMoreFilesRouteImport.update({
+    id: '/more/files',
+    path: '/more/files',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminClassesIdRoute =
-  AuthenticatedAdminClassesIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedAdminClassesRoute,
+const AuthenticatedAdminMoreInvitesRoute =
+  AuthenticatedAdminMoreInvitesRouteImport.update({
+    id: '/more/invites',
+    path: '/more/invites',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMoreNotificationsRoute =
+  AuthenticatedAdminMoreNotificationsRouteImport.update({
+    id: '/more/notifications',
+    path: '/more/notifications',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMorePlansRoute =
+  AuthenticatedAdminMorePlansRouteImport.update({
+    id: '/more/plans',
+    path: '/more/plans',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMoreReportsRoute =
+  AuthenticatedAdminMoreReportsRouteImport.update({
+    id: '/more/reports',
+    path: '/more/reports',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMoreSettingsRoute =
+  AuthenticatedAdminMoreSettingsRouteImport.update({
+    id: '/more/settings',
+    path: '/more/settings',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -336,18 +336,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -357,25 +350,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/_admin': {
-      id: '/_authenticated/_admin'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -385,25 +371,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/_admin/members': {
-      id: '/_authenticated/_admin/members'
-      path: '/members'
-      fullPath: '/members'
-      preLoaderRoute: typeof AuthenticatedAdminMembersRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/_admin/finances': {
-      id: '/_authenticated/_admin/finances'
-      path: '/finances'
-      fullPath: '/finances'
-      preLoaderRoute: typeof AuthenticatedAdminFinancesRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+    '/_authenticated/_admin': {
+      id: '/_authenticated/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/_admin/dashboard': {
-      id: '/_authenticated/_admin/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/_admin/attendance': {
+      id: '/_authenticated/_admin/attendance'
+      path: '/attendance'
+      fullPath: '/attendance'
+      preLoaderRoute: typeof AuthenticatedAdminAttendanceRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/_admin/classes': {
@@ -413,74 +413,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminClassesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/_admin/attendance': {
-      id: '/_authenticated/_admin/attendance'
-      path: '/attendance'
-      fullPath: '/attendance'
-      preLoaderRoute: typeof AuthenticatedAdminAttendanceRouteImport
+    '/_authenticated/_admin/dashboard': {
+      id: '/_authenticated/_admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/_admin/finances': {
+      id: '/_authenticated/_admin/finances'
+      path: '/finances'
+      fullPath: '/finances'
+      preLoaderRoute: typeof AuthenticatedAdminFinancesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/_admin/members': {
+      id: '/_authenticated/_admin/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof AuthenticatedAdminMembersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/classes/$id': {
+      id: '/_authenticated/_admin/classes/$id'
+      path: '/$id'
+      fullPath: '/classes/$id'
+      preLoaderRoute: typeof AuthenticatedAdminClassesIdRouteImport
+      parentRoute: typeof AuthenticatedAdminClassesRoute
+    }
+    '/_authenticated/_admin/members/$id': {
+      id: '/_authenticated/_admin/members/$id'
+      path: '/$id'
+      fullPath: '/members/$id'
+      preLoaderRoute: typeof AuthenticatedAdminMembersIdRouteImport
+      parentRoute: typeof AuthenticatedAdminMembersRoute
     }
     '/_authenticated/_admin/more/': {
       id: '/_authenticated/_admin/more/'
       path: '/more'
       fullPath: '/more/'
       preLoaderRoute: typeof AuthenticatedAdminMoreIndexRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/_admin/more/settings': {
-      id: '/_authenticated/_admin/more/settings'
-      path: '/more/settings'
-      fullPath: '/more/settings'
-      preLoaderRoute: typeof AuthenticatedAdminMoreSettingsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/_admin/more/reports': {
-      id: '/_authenticated/_admin/more/reports'
-      path: '/more/reports'
-      fullPath: '/more/reports'
-      preLoaderRoute: typeof AuthenticatedAdminMoreReportsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/_admin/more/plans': {
-      id: '/_authenticated/_admin/more/plans'
-      path: '/more/plans'
-      fullPath: '/more/plans'
-      preLoaderRoute: typeof AuthenticatedAdminMorePlansRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/_admin/more/notifications': {
-      id: '/_authenticated/_admin/more/notifications'
-      path: '/more/notifications'
-      fullPath: '/more/notifications'
-      preLoaderRoute: typeof AuthenticatedAdminMoreNotificationsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/_admin/more/invites': {
-      id: '/_authenticated/_admin/more/invites'
-      path: '/more/invites'
-      fullPath: '/more/invites'
-      preLoaderRoute: typeof AuthenticatedAdminMoreInvitesRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/_admin/more/files': {
-      id: '/_authenticated/_admin/more/files'
-      path: '/more/files'
-      fullPath: '/more/files'
-      preLoaderRoute: typeof AuthenticatedAdminMoreFilesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/_admin/more/coaches': {
@@ -490,19 +462,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminMoreCoachesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/_admin/members/$id': {
-      id: '/_authenticated/_admin/members/$id'
-      path: '/$id'
-      fullPath: '/members/$id'
-      preLoaderRoute: typeof AuthenticatedAdminMembersIdRouteImport
-      parentRoute: typeof AuthenticatedAdminMembersRoute
+    '/_authenticated/_admin/more/files': {
+      id: '/_authenticated/_admin/more/files'
+      path: '/more/files'
+      fullPath: '/more/files'
+      preLoaderRoute: typeof AuthenticatedAdminMoreFilesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/_admin/classes/$id': {
-      id: '/_authenticated/_admin/classes/$id'
-      path: '/$id'
-      fullPath: '/classes/$id'
-      preLoaderRoute: typeof AuthenticatedAdminClassesIdRouteImport
-      parentRoute: typeof AuthenticatedAdminClassesRoute
+    '/_authenticated/_admin/more/invites': {
+      id: '/_authenticated/_admin/more/invites'
+      path: '/more/invites'
+      fullPath: '/more/invites'
+      preLoaderRoute: typeof AuthenticatedAdminMoreInvitesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/more/notifications': {
+      id: '/_authenticated/_admin/more/notifications'
+      path: '/more/notifications'
+      fullPath: '/more/notifications'
+      preLoaderRoute: typeof AuthenticatedAdminMoreNotificationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/more/plans': {
+      id: '/_authenticated/_admin/more/plans'
+      path: '/more/plans'
+      fullPath: '/more/plans'
+      preLoaderRoute: typeof AuthenticatedAdminMorePlansRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/more/reports': {
+      id: '/_authenticated/_admin/more/reports'
+      path: '/more/reports'
+      fullPath: '/more/reports'
+      preLoaderRoute: typeof AuthenticatedAdminMoreReportsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/more/settings': {
+      id: '/_authenticated/_admin/more/settings'
+      path: '/more/settings'
+      fullPath: '/more/settings'
+      preLoaderRoute: typeof AuthenticatedAdminMoreSettingsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
   }
 }

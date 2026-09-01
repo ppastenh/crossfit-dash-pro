@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "./members";
 import { UserPlus, Clock, User as UserIcon, CalendarDays, Pencil, Search } from "lucide-react";
@@ -25,22 +26,31 @@ export const Route = createFileRoute("/_authenticated/_admin/classes/$id")({
   component: ClassDetail,
 });
 
+type BookingRow = {
+  id: string;
+  status: string;
+  wodplace_users: { name: string } | null;
+};
+
 function ClassDetail() {
   const { id } = Route.useParams();
+  const { boxId } = useBox();
   const [tab, setTab] = useState<"asistentes" | "espera">("asistentes");
   const [q, setQ] = useState("");
 
   const cls = useQuery({
-    queryKey: ["class", id],
-    queryFn: async () => (await supabase.from("classes").select("*, coach:coach_id(full_name)").eq("id", id).maybeSingle()).data,
+    queryKey: ["class", boxId, id],
+    queryFn: async () =>
+      (await supabase.from("class_sessions").select("*, coaches(name)").eq("box_id", boxId).eq("id", id).maybeSingle()).data,
   });
 
   const attendees = useQuery({
-    queryKey: ["class-attendees", id],
-    queryFn: async () => (await supabase
-      .from("class_attendees")
-      .select("id, status, member:member_id(id, full_name, photo_url)")
-      .eq("class_id", id)).data ?? [],
+    queryKey: ["class-bookings", boxId, id],
+    queryFn: async () => ((await supabase
+      .from("class_bookings")
+      .select("id, status, wodplace_users(name)")
+      .eq("box_id", boxId)
+      .eq("session_id", id)).data ?? []) as unknown as BookingRow[],
   });
 
   const c = cls.data;
@@ -51,7 +61,7 @@ function ClassDetail() {
   const pct = c.capacity ? Math.min(100, (inscritos.length / c.capacity) * 100) : 0;
 
   const list = (tab === "asistentes" ? inscritos : espera).filter((a) =>
-    (a.member?.full_name ?? "").toLowerCase().includes(q.toLowerCase())
+    (a.wodplace_users?.name ?? "").toLowerCase().includes(q.toLowerCase())
   );
 
   const [h, m] = String(c.start_time).split(":").map(Number);
@@ -74,15 +84,15 @@ function ClassDetail() {
               start_time: String(c.start_time).slice(0, 5),
               duration_minutes: c.duration_minutes ?? 60,
               capacity: c.capacity ?? 15,
-              class_date: c.class_date,
+              session_date: c.session_date,
             }} />
           </div>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{String(c.start_time).slice(0, 5)} - {end}</span>
-          <span className="flex items-center gap-1"><UserIcon className="h-3.5 w-3.5" />{c.coach?.full_name || "Sin coach"}</span>
-          <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{format(parseISO(c.class_date), "dd MMM yyyy", { locale: es })}</span>
+          <span className="flex items-center gap-1"><UserIcon className="h-3.5 w-3.5" />{c.coaches?.name || "Sin coach"}</span>
+          <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{format(parseISO(c.session_date), "dd MMM yyyy", { locale: es })}</span>
         </div>
 
         <div className="mt-4 flex items-center gap-3">
@@ -122,8 +132,8 @@ function ClassDetail() {
           )}
           {list.map((a) => (
             <div key={a.id} className="flex items-center gap-3 py-3">
-              <Avatar name={a.member?.full_name ?? "?"} url={a.member?.photo_url} size={40} />
-              <p className="min-w-0 flex-1 truncate text-sm font-semibold">{a.member?.full_name}</p>
+              <Avatar name={a.wodplace_users?.name ?? "?"} size={40} />
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold">{a.wodplace_users?.name}</p>
             </div>
           ))}
         </div>
@@ -138,19 +148,20 @@ function ClassDetail() {
 
 function EditClass({ classId, initial }: {
   classId: string;
-  initial: { name: string; start_time: string; duration_minutes: number; capacity: number; class_date: string };
+  initial: { name: string; start_time: string; duration_minutes: number; capacity: number; session_date: string };
 }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(initial);
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const mut = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("classes").update(form).eq("id", classId);
+      const { error } = await supabase.from("class_sessions").update(form).eq("box_id", boxId).eq("id", classId);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Clase actualizada");
-      qc.invalidateQueries({ queryKey: ["class", classId] });
+      qc.invalidateQueries({ queryKey: ["class", boxId, classId] });
       qc.invalidateQueries({ queryKey: ["classes-range"] });
       setOpen(false);
     },
@@ -168,7 +179,7 @@ function EditClass({ classId, initial }: {
         <form onSubmit={(e) => { e.preventDefault(); mut.mutate(); }} className="space-y-3">
           <div><Label>Nombre</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Fecha</Label><Input type="date" value={form.class_date} onChange={(e) => setForm({ ...form, class_date: e.target.value })} /></div>
+            <div><Label>Fecha</Label><Input type="date" value={form.session_date} onChange={(e) => setForm({ ...form, session_date: e.target.value })} /></div>
             <div><Label>Hora</Label><Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -182,21 +193,34 @@ function EditClass({ classId, initial }: {
   );
 }
 
+type MemberHit = { user_id: string; wodplace_users: { name: string } | null };
+
 function AddParticipant({ classId }: { classId: string }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const search = useQuery({
-    queryKey: ["members-search", q],
-    queryFn: async () => (await supabase.from("members").select("id, full_name, photo_url").ilike("full_name", `%${q}%`).limit(10)).data ?? [],
+    queryKey: ["members-search", boxId, q],
+    queryFn: async () => ((await supabase
+      .from("box_members")
+      .select("user_id, wodplace_users!inner(name)")
+      .eq("box_id", boxId)
+      .ilike("wodplace_users.name", `%${q}%`)
+      .limit(10)).data ?? []) as unknown as MemberHit[],
     enabled: q.length > 0,
   });
   const add = useMutation({
-    mutationFn: async (memberId: string) => {
-      const { error } = await supabase.from("class_attendees").insert({ class_id: classId, member_id: memberId, status: "inscrito" });
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.from("class_bookings").insert({
+        box_id: boxId,
+        session_id: classId,
+        user_id: userId,
+        status: "inscrito",
+      });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Agregado"); qc.invalidateQueries({ queryKey: ["class-attendees", classId] }); setOpen(false); setQ(""); },
+    onSuccess: () => { toast.success("Agregado"); qc.invalidateQueries({ queryKey: ["class-bookings", boxId, classId] }); setOpen(false); setQ(""); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
   });
   return (
@@ -211,10 +235,10 @@ function AddParticipant({ classId }: { classId: string }) {
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar miembro..." />
         <div className="max-h-72 space-y-1 overflow-y-auto">
           {(search.data ?? []).map((m) => (
-            <button key={m.id} onClick={() => add.mutate(m.id)}
+            <button key={m.user_id} onClick={() => add.mutate(m.user_id)}
               className="flex w-full items-center gap-3 rounded-xl bg-secondary p-2 text-left">
-              <Avatar name={m.full_name} url={m.photo_url} size={32} />
-              <span className="text-sm">{m.full_name}</span>
+              <Avatar name={m.wodplace_users?.name ?? "?"} size={32} />
+              <span className="text-sm">{m.wodplace_users?.name}</span>
             </button>
           ))}
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +15,11 @@ import { toast } from "sonner";
 export type QuickViewClass = {
   id: string;
   name: string;
-  class_date: string;
+  session_date: string;
   start_time: string;
   duration_minutes: number;
   capacity: number;
-  coach?: { full_name: string } | null;
+  coach?: { name: string } | null;
   enrolled?: number;
   attended?: number;
 };
@@ -33,10 +34,11 @@ export function ClassQuickView({
   onOpenChange: (v: boolean) => void;
 }) {
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     name: "",
-    class_date: "",
+    session_date: "",
     start_time: "",
     duration_minutes: 60,
     capacity: 15,
@@ -47,7 +49,7 @@ export function ClassQuickView({
       setEditing(false);
       setForm({
         name: c.name,
-        class_date: c.class_date,
+        session_date: c.session_date,
         start_time: String(c.start_time).slice(0, 5),
         duration_minutes: c.duration_minutes || 60,
         capacity: c.capacity ?? 15,
@@ -57,13 +59,13 @@ export function ClassQuickView({
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["classes-range"] });
-    if (c) qc.invalidateQueries({ queryKey: ["class", c.id] });
+    if (c) qc.invalidateQueries({ queryKey: ["class", boxId, c.id] });
   };
 
   const save = useMutation({
     mutationFn: async () => {
       if (!c) return;
-      const { error } = await supabase.from("classes").update(form).eq("id", c.id);
+      const { error } = await supabase.from("class_sessions").update(form).eq("box_id", boxId).eq("id", c.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -77,8 +79,8 @@ export function ClassQuickView({
   const del = useMutation({
     mutationFn: async () => {
       if (!c) return;
-      await supabase.from("class_attendees").delete().eq("class_id", c.id);
-      const { error } = await supabase.from("classes").delete().eq("id", c.id);
+      await supabase.from("class_bookings").delete().eq("box_id", boxId).eq("session_id", c.id);
+      const { error } = await supabase.from("class_sessions").delete().eq("box_id", boxId).eq("id", c.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -112,7 +114,7 @@ export function ClassQuickView({
             >
               <div><Label>Nombre</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-2">
-                <div><Label>Fecha</Label><Input type="date" value={form.class_date} onChange={(e) => setForm({ ...form, class_date: e.target.value })} /></div>
+                <div><Label>Fecha</Label><Input type="date" value={form.session_date} onChange={(e) => setForm({ ...form, session_date: e.target.value })} /></div>
                 <div><Label>Hora</Label><Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} /></div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -128,10 +130,10 @@ export function ClassQuickView({
             <>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{String(c.start_time).slice(0, 5)} - {end}</span>
-                <span className="flex items-center gap-1"><UserIcon className="h-3.5 w-3.5" />{c.coach?.full_name || "Sin coach"}</span>
+                <span className="flex items-center gap-1"><UserIcon className="h-3.5 w-3.5" />{c.coach?.name || "Sin coach"}</span>
                 <span className="flex items-center gap-1">
                   <CalendarDays className="h-3.5 w-3.5" />
-                  {format(parseISO(c.class_date), "dd MMM yyyy", { locale: es })}
+                  {format(parseISO(c.session_date), "dd MMM yyyy", { locale: es })}
                 </span>
               </div>
 
@@ -178,10 +180,11 @@ export function ClassQuickView({
 
 /** Small helper so callers can fetch fresh enrolled counts if needed. */
 export function useClassEnrolled(classId: string | null) {
+  const { boxId } = useBox();
   return useQuery({
-    queryKey: ["class-enrolled", classId],
+    queryKey: ["class-enrolled", boxId, classId],
     enabled: !!classId,
     queryFn: async () =>
-      (await supabase.from("class_attendees").select("id").eq("class_id", classId!)).data?.length ?? 0,
+      (await supabase.from("class_bookings").select("id").eq("box_id", boxId).eq("session_id", classId!)).data?.length ?? 0,
   });
 }

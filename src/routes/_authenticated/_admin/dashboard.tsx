@@ -3,6 +3,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { MetricCard } from "@/components/admin/MetricCard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
 import { Users, CalendarDays, DollarSign, AlertTriangle, Plus, CreditCard, Dumbbell, UserPlus, ChevronRight, Megaphone } from "lucide-react";
 import { format, startOfMonth, addDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -22,20 +23,20 @@ export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
   component: DashboardPage,
 });
 
-function useDashboardStats() {
+function useDashboardStats(boxId: string) {
   return useQuery({
-    queryKey: ["dashboard-stats"],
+    queryKey: ["dashboard-stats", boxId],
     queryFn: async () => {
       const today = format(new Date(), "yyyy-MM-dd");
       const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
       const in7days = format(addDays(new Date(), 7), "yyyy-MM-dd");
 
       const [newThisMonth, active, todayClasses, monthRevenue, expiring] = await Promise.all([
-        supabase.from("members").select("id", { count: "exact", head: true }).gte("join_date", monthStart),
-        supabase.from("members").select("id", { count: "exact", head: true }).eq("status", "activo"),
-        supabase.from("classes").select("id", { count: "exact", head: true }).eq("class_date", today),
-        supabase.from("payments").select("amount").eq("status", "pagado").gte("paid_at", monthStart),
-        supabase.from("members").select("id", { count: "exact", head: true }).lte("next_payment", in7days).gte("next_payment", today),
+        supabase.from("box_members").select("user_id", { count: "exact", head: true }).eq("box_id", boxId).gte("joined_at", monthStart),
+        supabase.from("box_members").select("user_id", { count: "exact", head: true }).eq("box_id", boxId).eq("status", "activo"),
+        supabase.from("class_sessions").select("id", { count: "exact", head: true }).eq("box_id", boxId).eq("session_date", today),
+        supabase.from("payments").select("amount").eq("box_id", boxId).eq("status", "pagado").gte("paid_at", monthStart),
+        supabase.from("box_members").select("user_id", { count: "exact", head: true }).eq("box_id", boxId).lte("next_payment_at", in7days).gte("next_payment_at", today),
       ]);
 
       const revenue = (monthRevenue.data ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0);
@@ -51,46 +52,67 @@ function useDashboardStats() {
   });
 }
 
-function useExpiringMembers(enabled: boolean) {
+type ExpiringRow = {
+  user_id: string;
+  status: string;
+  next_payment_at: string | null;
+  wodplace_users: { name: string } | null;
+  plans: { name: string } | null;
+};
+
+function useExpiringMembers(enabled: boolean, boxId: string) {
   return useQuery({
     enabled,
-    queryKey: ["expiring-members"],
+    queryKey: ["expiring-members", boxId],
     queryFn: async () => {
       const today = format(new Date(), "yyyy-MM-dd");
       const in7days = format(addDays(new Date(), 7), "yyyy-MM-dd");
       const { data } = await supabase
-        .from("members")
-        .select("id, full_name, status, next_payment, plans(name)")
-        .gte("next_payment", today)
-        .lte("next_payment", in7days)
-        .order("next_payment", { ascending: true });
-      return data ?? [];
+        .from("box_members")
+        .select("user_id, status, next_payment_at, wodplace_users(name), plans(name)")
+        .eq("box_id", boxId)
+        .gte("next_payment_at", today)
+        .lte("next_payment_at", in7days)
+        .order("next_payment_at", { ascending: true });
+      return (data ?? []) as unknown as ExpiringRow[];
     },
   });
 }
 
+type UpcomingClass = { id: string; name: string; start_time: string | null; capacity: number; bookings: number };
 
-function useUpcomingClasses() {
+function useUpcomingClasses(boxId: string) {
   return useQuery({
-    queryKey: ["upcoming-classes"],
+    queryKey: ["upcoming-classes", boxId],
     queryFn: async () => {
       const today = format(new Date(), "yyyy-MM-dd");
-      const { data } = await supabase
-        .from("classes")
-        .select("id, name, start_time, capacity, class_attendees(id)")
-        .eq("class_date", today)
+      const { data: sessions } = await supabase
+        .from("class_sessions")
+        .select("id, name, start_time, capacity")
+        .eq("box_id", boxId)
+        .eq("session_date", today)
         .order("start_time", { ascending: true })
         .limit(4);
-      return data ?? [];
+      const rows = sessions ?? [];
+      if (rows.length === 0) return [] as UpcomingClass[];
+      const { data: bookings } = await supabase
+        .from("class_bookings")
+        .select("session_id")
+        .eq("box_id", boxId)
+        .in("session_id", rows.map((r) => r.id));
+      const counts = new Map<string, number>();
+      for (const b of bookings ?? []) counts.set(b.session_id, (counts.get(b.session_id) ?? 0) + 1);
+      return rows.map((r) => ({ ...r, bookings: counts.get(r.id) ?? 0 })) as UpcomingClass[];
     },
   });
 }
 
 function DashboardPage() {
-  const stats = useDashboardStats();
-  const upcoming = useUpcomingClasses();
+  const { boxId } = useBox();
+  const stats = useDashboardStats(boxId);
+  const upcoming = useUpcomingClasses(boxId);
   const [expOpen, setExpOpen] = useState(false);
-  const expiring = useExpiringMembers(expOpen);
+  const expiring = useExpiringMembers(expOpen, boxId);
   const s = stats.data;
 
   return (
@@ -139,21 +161,21 @@ function DashboardPage() {
             )}
             {(expiring.data ?? []).map((m) => (
               <Link
-                key={m.id}
+                key={m.user_id}
                 to="/members/$id"
-                params={{ id: m.id }}
+                params={{ id: m.user_id }}
                 onClick={() => setExpOpen(false)}
                 className="flex items-center gap-3 rounded-2xl border bg-card p-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{m.full_name}</p>
+                  <p className="truncate text-sm font-semibold">{m.wodplace_users?.name}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {(m as { plans?: { name?: string } | null }).plans?.name ?? "Sin plan"}
+                    {m.plans?.name ?? "Sin plan"}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
                   <div className="text-xs font-bold text-amber-400">
-                    {m.next_payment ? format(new Date(`${m.next_payment}T00:00:00`), "d MMM", { locale: es }) : "—"}
+                    {m.next_payment_at ? format(new Date(`${m.next_payment_at}T00:00:00`), "d MMM", { locale: es }) : "—"}
                   </div>
                   <div className="text-[10px] text-muted-foreground">vence</div>
                 </div>
@@ -186,7 +208,7 @@ function DashboardPage() {
             </div>
           )}
           {(upcoming.data ?? []).map((c) => {
-            const enrolled = c.class_attendees?.length ?? 0;
+            const enrolled = c.bookings ?? 0;
             const pct = c.capacity ? Math.min(100, (enrolled / c.capacity) * 100) : 0;
             return (
               <Link to="/classes/$id" params={{ id: c.id }} key={c.id}

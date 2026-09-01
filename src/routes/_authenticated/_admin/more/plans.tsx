@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
 import { Plus, Pencil, Trash2, Check, X, MoreVertical, Copy, Star, PauseCircle, PlayCircle, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -50,21 +51,22 @@ const empty = {
 
 function PlansPage() {
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const [editing, setEditing] = useState<Plan | null>(null);
   const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
 
   const plans = useQuery({
-    queryKey: ["plans"],
+    queryKey: ["plans", boxId],
     queryFn: async () =>
-      ((await supabase.from("plans").select("*").order("price")).data ?? []) as unknown as Plan[],
+      ((await supabase.from("plans").select("*").eq("box_id", boxId).order("price")).data ?? []) as unknown as Plan[],
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["plans"] });
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("plans").delete().eq("id", id);
+      const { error } = await supabase.from("plans").delete().eq("box_id", boxId).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -77,6 +79,7 @@ function PlansPage() {
   const duplicate = useMutation({
     mutationFn: async (p: Plan) => {
       const { error } = await supabase.from("plans").insert({
+        box_id: boxId,
         name: `${p.name} (copia)`,
         price: p.price,
         duration_days: p.duration_days,
@@ -94,7 +97,7 @@ function PlansPage() {
 
   const toggleFlag = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: { is_active?: boolean; is_featured?: boolean } }) => {
-      const { error } = await supabase.from("plans").update(patch).eq("id", id);
+      const { error } = await supabase.from("plans").update(patch).eq("box_id", boxId).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => invalidate(),
@@ -255,6 +258,7 @@ function PlanDialog({
   onDelete: (id: string) => void;
 }) {
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const [f, setF] = useState(empty);
   const [benefit, setBenefit] = useState("");
   const [key, setKey] = useState<string | null>(null);
@@ -287,8 +291,8 @@ function PlanDialog({
         is_active: f.is_active,
       };
       const { error } = plan
-        ? await supabase.from("plans").update(payload).eq("id", plan.id)
-        : await supabase.from("plans").insert(payload);
+        ? await supabase.from("plans").update(payload).eq("box_id", boxId).eq("id", plan.id)
+        : await supabase.from("plans").insert({ ...payload, box_id: boxId });
       if (error) throw error;
     },
     onSuccess: () => {

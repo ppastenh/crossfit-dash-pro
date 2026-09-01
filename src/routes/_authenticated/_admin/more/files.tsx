@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
+import { randomKey } from "@/lib/ids";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -28,41 +30,58 @@ const MAX_MB = 20;
 
 type Contract = {
   id: string;
+  slug: string;
   title: string;
   doc_type: string;
-  file_name: string;
-  mime_type: string;
-  storage_path: string;
+  file_name: string | null;
+  mime_type: string | null;
+  object_path: string | null;
   created_at: string;
   updated_at: string;
 };
 
-function iconFor(mime: string) {
-  if (mime.startsWith("image/")) return FileImage;
-  if (mime.includes("pdf")) return FileType2;
+function iconFor(mime: string | null) {
+  if (mime?.startsWith("image/")) return FileImage;
+  if (mime?.includes("pdf")) return FileType2;
   return FileText;
 }
 
-async function fetchContracts() {
-  const { data, error } = await supabase.from("contracts").select("*").order("updated_at", { ascending: false });
+function slugify(s: string) {
+  return s
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    || `doc-${randomKey()}`;
+}
+
+async function fetchContracts(boxId: string) {
+  const { data, error } = await supabase
+    .from("contract_documents")
+    .select("*")
+    .eq("box_id", boxId)
+    .order("updated_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Contract[];
 }
 
-async function fetchStats() {
-  const [{ count: total }, { data: acc }] = await Promise.all([
-    supabase.from("members").select("*", { count: "exact", head: true }),
-    supabase.from("contract_acceptances").select("contract_id"),
+async function fetchStats(boxId: string) {
+  const [{ count: total }, { data: reads }] = await Promise.all([
+    supabase.from("box_members").select("user_id", { count: "exact", head: true }).eq("box_id", boxId),
+    supabase.from("contract_read_progress").select("document_slug").eq("box_id", boxId),
   ]);
   const counts = new Map<string, number>();
-  for (const row of acc ?? []) counts.set(row.contract_id, (counts.get(row.contract_id) ?? 0) + 1);
-  return { totalMembers: total ?? 0, byContract: counts };
+  for (const row of reads ?? []) counts.set(row.document_slug, (counts.get(row.document_slug) ?? 0) + 1);
+  return { totalMembers: total ?? 0, bySlug: counts };
 }
 
 function FilesPage() {
   const qc = useQueryClient();
-  const { data: contracts = [], isLoading } = useQuery({ queryKey: ["contracts"], queryFn: fetchContracts });
-  const { data: stats } = useQuery({ queryKey: ["contract-stats"], queryFn: fetchStats });
+  const { boxId } = useBox();
+  const { data: contracts = [], isLoading } = useQuery({ queryKey: ["contracts", boxId], queryFn: () => fetchContracts(boxId) });
+  const { data: stats } = useQuery({ queryKey: ["contract-stats", boxId], queryFn: () => fetchStats(boxId) });
   const [open, setOpen] = useState(false);
 
   const invalidate = () => {
@@ -108,7 +127,7 @@ function FilesPage() {
         ) : (
           <ul className="space-y-3">
             {contracts.map((c) => (
-              <ContractRow key={c.id} contract={c} accepted={stats?.byContract.get(c.id) ?? 0} total={stats?.totalMembers ?? 0} onChange={invalidate} />
+              <ContractRow key={c.slug} contract={c} accepted={stats?.bySlug.get(c.slug) ?? 0} total={stats?.totalMembers ?? 0} onChange={invalidate} />
             ))}
           </ul>
         )}
@@ -120,20 +139,26 @@ function FilesPage() {
 
 function ContractRow({ contract, accepted, total, onChange }: { contract: Contract; accepted: number; total: number; onChange: () => void }) {
   const Icon = iconFor(contract.mime_type);
+  const { boxId } = useBox();
   const replaceRef = useRef<HTMLInputElement>(null);
 
   const replaceMut = useMutation({
     mutationFn: async (file: File) => {
       if (file.size > MAX_MB * 1024 * 1024) throw new Error(`Máx ${MAX_MB}MB`);
       const ext = file.name.split(".").pop() ?? "bin";
-      const path = `${contract.id}/${crypto.randomUUID()}.${ext}`;
+      const path = `${boxId}/${contract.slug}/${randomKey()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("contracts").upload(path, file, { contentType: file.type });
       if (upErr) throw upErr;
-      const { error: dbErr } = await supabase.from("contracts").update({
-        file_name: file.name, mime_type: file.type || "application/octet-stream", storage_path: path,
-      }).eq("id", contract.id);
+      const { error: dbErr } = await supabase.from("contract_documents").update({
+        file_name: file.name,
+        mime_type: file.type || "application/octet-stream",
+        object_path: path,
+        updated_at: new Date().toISOString(),
+      }).eq("box_id", boxId).eq("slug", contract.slug);
       if (dbErr) throw dbErr;
-      await supabase.storage.from("contracts").remove([contract.storage_path]).catch(() => {});
+      if (contract.object_path) {
+        await supabase.storage.from("contracts").remove([contract.object_path]).catch(() => {});
+      }
     },
     onSuccess: () => { toast.success("Archivo reemplazado. Los atletas deben aceptar de nuevo."); onChange(); },
     onError: (e: Error) => toast.error(e.message),
@@ -141,8 +166,10 @@ function ContractRow({ contract, accepted, total, onChange }: { contract: Contra
 
   const deleteMut = useMutation({
     mutationFn: async () => {
-      await supabase.storage.from("contracts").remove([contract.storage_path]).catch(() => {});
-      const { error } = await supabase.from("contracts").delete().eq("id", contract.id);
+      if (contract.object_path) {
+        await supabase.storage.from("contracts").remove([contract.object_path]).catch(() => {});
+      }
+      const { error } = await supabase.from("contract_documents").delete().eq("box_id", boxId).eq("slug", contract.slug);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Archivo eliminado"); onChange(); },
@@ -150,7 +177,8 @@ function ContractRow({ contract, accepted, total, onChange }: { contract: Contra
   });
 
   async function openFile() {
-    const { data, error } = await supabase.storage.from("contracts").createSignedUrl(contract.storage_path, 60);
+    if (!contract.object_path) return toast.error("Este documento aún no tiene archivo cargado");
+    const { data, error } = await supabase.storage.from("contracts").createSignedUrl(contract.object_path, 60);
     if (error || !data) return toast.error("No se pudo abrir");
     window.open(data.signedUrl, "_blank", "noopener");
   }
@@ -165,7 +193,7 @@ function ContractRow({ contract, accepted, total, onChange }: { contract: Contra
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold">{contract.title}</p>
-          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{contract.doc_type} · {contract.file_name}</p>
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{contract.doc_type} · {contract.file_name ?? "—"}</p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">Actualizado {new Date(contract.updated_at).toLocaleDateString()}</p>
         </div>
       </div>
@@ -195,6 +223,7 @@ function ContractRow({ contract, accepted, total, onChange }: { contract: Contra
 }
 
 function UploadDialog({ onDone }: { onDone: () => void }) {
+  const { boxId } = useBox();
   const [title, setTitle] = useState("");
   const [docType, setDocType] = useState("Contrato");
   const [file, setFile] = useState<File | null>(null);
@@ -206,19 +235,28 @@ function UploadDialog({ onDone }: { onDone: () => void }) {
     if (file.size > MAX_MB * 1024 * 1024) return toast.error(`Máx ${MAX_MB}MB`);
     setBusy(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const { data: row, error: insErr } = await supabase.from("contracts").insert({
-        title: title.trim(), doc_type: docType, file_name: file.name,
-        mime_type: file.type || "application/octet-stream", storage_path: "pending",
-        uploaded_by: userData.user?.id ?? null,
-      }).select("id").single();
-      if (insErr || !row) throw insErr ?? new Error("Error");
+      const slug = slugify(title);
       const ext = file.name.split(".").pop() ?? "bin";
-      const path = `${row.id}/${crypto.randomUUID()}.${ext}`;
+      const path = `${boxId}/${slug}/${randomKey()}.${ext}`;
+
       const { error: upErr } = await supabase.storage.from("contracts").upload(path, file, { contentType: file.type });
-      if (upErr) { await supabase.from("contracts").delete().eq("id", row.id); throw upErr; }
-      const { error: updErr } = await supabase.from("contracts").update({ storage_path: path }).eq("id", row.id);
-      if (updErr) throw updErr;
+      if (upErr) throw upErr;
+
+      const { error: dbErr } = await supabase.from("contract_documents").upsert({
+        box_id: boxId,
+        slug,
+        title: title.trim(),
+        doc_type: docType,
+        file_name: file.name,
+        mime_type: file.type || "application/octet-stream",
+        object_path: path,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "box_id,slug" });
+      if (dbErr) {
+        await supabase.storage.from("contracts").remove([path]).catch(() => {});
+        throw dbErr;
+      }
+
       toast.success("Archivo subido. Se notificará a los atletas.");
       onDone();
     } catch (e) {

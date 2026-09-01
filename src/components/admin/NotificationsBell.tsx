@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Megaphone, X } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { useBox } from "@/lib/box-context";
 import {
   fetchAnnouncements,
   fetchMyReads,
@@ -13,19 +14,20 @@ import {
 
 export function NotificationsBell() {
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<Announcement | null>(null);
 
-  const { data: items = [] } = useQuery({ queryKey: ["announcements"], queryFn: fetchAnnouncements });
-  const { data: reads } = useQuery({ queryKey: ["announcement-reads"], queryFn: fetchMyReads });
+  const { data: items = [] } = useQuery({ queryKey: ["announcements", boxId], queryFn: () => fetchAnnouncements(boxId) });
+  const { data: reads } = useQuery({ queryKey: ["announcement-reads", boxId], queryFn: () => fetchMyReads(boxId) });
 
   const unread = items.filter((a) => !reads?.has(a.id)).length;
 
   async function openDetail(a: Announcement) {
     setDetail(a);
     if (!reads?.has(a.id)) {
-      await markRead(a.id);
-      qc.invalidateQueries({ queryKey: ["announcement-reads"] });
+      await markRead(a.id, boxId);
+      qc.invalidateQueries({ queryKey: ["announcement-reads", boxId] });
     }
   }
 

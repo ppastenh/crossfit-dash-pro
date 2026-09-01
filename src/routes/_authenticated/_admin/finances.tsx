@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
 import { format, startOfMonth } from "date-fns";
 import { Plus, TrendingUp, Clock, AlertTriangle } from "lucide-react";
 import { StatusChip } from "./members";
@@ -25,17 +26,27 @@ export const Route = createFileRoute("/_authenticated/_admin/finances")({
   component: FinancesPage,
 });
 
+type PaymentRow = {
+  id: string;
+  amount: number;
+  status: string;
+  paid_at: string | null;
+  method: string | null;
+  wodplace_users: { name: string } | null;
+};
+
 function FinancesPage() {
+  const { boxId } = useBox();
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const today = format(new Date(), "yyyy-MM-dd");
 
   const stats = useQuery({
-    queryKey: ["fin-stats", monthStart],
+    queryKey: ["fin-stats", boxId, monthStart],
     queryFn: async () => {
       const [income, pending, upcoming] = await Promise.all([
-        supabase.from("payments").select("amount").eq("status", "pagado").gte("paid_at", monthStart),
-        supabase.from("payments").select("id", { count: "exact", head: true }).eq("status", "pendiente"),
-        supabase.from("members").select("id", { count: "exact", head: true }).gte("next_payment", today).lte("next_payment", format(new Date(Date.now() + 7 * 864e5), "yyyy-MM-dd")),
+        supabase.from("payments").select("amount").eq("box_id", boxId).eq("status", "pagado").gte("paid_at", monthStart),
+        supabase.from("payments").select("id", { count: "exact", head: true }).eq("box_id", boxId).eq("status", "pendiente"),
+        supabase.from("box_members").select("user_id", { count: "exact", head: true }).eq("box_id", boxId).gte("next_payment_at", today).lte("next_payment_at", format(new Date(Date.now() + 7 * 864e5), "yyyy-MM-dd")),
       ]);
       const total = (income.data ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0);
       return { total, pending: pending.count ?? 0, upcoming: upcoming.count ?? 0 };
@@ -43,12 +54,13 @@ function FinancesPage() {
   });
 
   const recent = useQuery({
-    queryKey: ["recent-payments"],
-    queryFn: async () => (await supabase
+    queryKey: ["recent-payments", boxId],
+    queryFn: async () => ((await supabase
       .from("payments")
-      .select("*, member:member_id(full_name)")
+      .select("id, amount, status, paid_at, method, wodplace_users(name)")
+      .eq("box_id", boxId)
       .order("created_at", { ascending: false })
-      .limit(20)).data ?? [],
+      .limit(20)).data ?? []) as unknown as PaymentRow[],
   });
 
   return (
@@ -83,7 +95,7 @@ function FinancesPage() {
         {recent.data?.map((p) => (
           <div key={p.id} className="flex items-center justify-between rounded-2xl border bg-card p-3">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{p.member?.full_name}</p>
+              <p className="truncate text-sm font-semibold">{p.wodplace_users?.name}</p>
               <p className="text-[11px] text-muted-foreground">{p.paid_at ? format(new Date(p.paid_at), "dd MMM yyyy") : "—"} · {p.method || "—"}</p>
             </div>
             <div className="flex flex-col items-end gap-1">
@@ -97,20 +109,28 @@ function FinancesPage() {
   );
 }
 
+type PayMember = { user_id: string; plan_id: string | null; wodplace_users: { name: string } | null };
+
 function AddPaymentDialog() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const [form, setForm] = useState({ member_id: "", plan_id: "", amount: "", method: "efectivo", status: "pagado" });
 
   const plans = useQuery({
-    queryKey: ["plans"],
-    queryFn: async () => (await supabase.from("plans").select("id, name, price").order("name")).data ?? [],
+    queryKey: ["plans", boxId],
+    queryFn: async () => (await supabase.from("plans").select("id, name, price").eq("box_id", boxId).order("name")).data ?? [],
   });
 
   const members = useQuery({
-    queryKey: ["pay-members", q],
-    queryFn: async () => (await supabase.from("members").select("id, full_name, plan_id").ilike("full_name", `%${q}%`).limit(10)).data ?? [],
+    queryKey: ["pay-members", boxId, q],
+    queryFn: async () => ((await supabase
+      .from("box_members")
+      .select("user_id, plan_id, wodplace_users!inner(name)")
+      .eq("box_id", boxId)
+      .ilike("wodplace_users.name", `%${q}%`)
+      .limit(10)).data ?? []) as unknown as PayMember[],
   });
 
   function pickPlan(planId: string) {
@@ -122,10 +142,12 @@ function AddPaymentDialog() {
   const mut = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("payments").insert({
-        member_id: form.member_id,
+        box_id: boxId,
+        user_id: form.member_id,
+        plan_id: form.plan_id || null,
         amount: Number(form.amount),
         method: form.method,
-        status: form.status as "pagado",
+        status: form.status,
         paid_at: form.status === "pagado" ? new Date().toISOString() : null,
       });
       if (error) throw error;
@@ -147,13 +169,13 @@ function AddPaymentDialog() {
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar..." />
             <div className="mt-1 max-h-32 space-y-1 overflow-y-auto">
               {(members.data ?? []).map((m) => (
-                <button key={m.id} type="button" onClick={() => {
+                <button key={m.user_id} type="button" onClick={() => {
                   const p = (plans.data ?? []).find((x) => x.id === m.plan_id);
-                  setForm({ ...form, member_id: m.id, plan_id: m.plan_id ?? "", amount: p ? String(p.price) : form.amount });
-                  setQ(m.full_name);
+                  setForm({ ...form, member_id: m.user_id, plan_id: m.plan_id ?? "", amount: p ? String(p.price) : form.amount });
+                  setQ(m.wodplace_users?.name ?? "");
                 }}
-                  className={`block w-full rounded-lg p-2 text-left text-sm ${form.member_id === m.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
-                  {m.full_name}
+                  className={`block w-full rounded-lg p-2 text-left text-sm ${form.member_id === m.user_id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
+                  {m.wodplace_users?.name}
                 </button>
               ))}
             </div>

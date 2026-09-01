@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
 import { Plus, ChevronLeft, ChevronRight, CalendarDays, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -88,28 +89,48 @@ export const Route = createFileRoute("/_authenticated/_admin/classes")({
 type ClassRow = {
   id: string;
   name: string;
-  class_date: string;
+  session_date: string;
   start_time: string;
   duration_minutes: number;
   capacity: number;
   level: string;
   status: string;
-  coach: { full_name: string } | null;
-  class_attendees: { id: string; status: string }[] | null;
+  coach: { name: string } | null;
+  class_bookings: { id: string; status: string }[];
 };
 
 function useClassesRange(from: Date, to: Date) {
+  const { boxId } = useBox();
   const f = format(from, "yyyy-MM-dd");
   const t = format(to, "yyyy-MM-dd");
   return useQuery({
-    queryKey: ["classes-range", f, t],
-    queryFn: async () =>
-      ((await supabase
-        .from("classes")
-        .select("id, name, class_date, start_time, duration_minutes, capacity, level, status, coach:coach_id(full_name), class_attendees(id, status)")
-        .gte("class_date", f)
-        .lte("class_date", t)
-        .order("start_time")).data ?? []) as unknown as ClassRow[],
+    queryKey: ["classes-range", boxId, f, t],
+    queryFn: async () => {
+      const { data: sessions } = await supabase
+        .from("class_sessions")
+        .select("id, name, session_date, start_time, duration_minutes, capacity, level, status, coach:coaches(name)")
+        .eq("box_id", boxId)
+        .gte("session_date", f)
+        .lte("session_date", t)
+        .order("start_time");
+      const rows = (sessions ?? []) as unknown as Omit<ClassRow, "class_bookings">[];
+      if (rows.length === 0) return [] as ClassRow[];
+
+      // class_bookings has no FK to class_sessions (kept loose on purpose), so
+      // it can't be embedded — fetch and group in JS.
+      const { data: bookings } = await supabase
+        .from("class_bookings")
+        .select("id, status, session_id")
+        .eq("box_id", boxId)
+        .in("session_id", rows.map((r) => r.id));
+      const bySession = new Map<string, { id: string; status: string }[]>();
+      for (const b of bookings ?? []) {
+        const arr = bySession.get(b.session_id) ?? [];
+        arr.push({ id: b.id, status: b.status });
+        bySession.set(b.session_id, arr);
+      }
+      return rows.map((r) => ({ ...r, class_bookings: bySession.get(r.id) ?? [] })) as ClassRow[];
+    },
   });
 }
 
@@ -190,7 +211,7 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
   const weekEnd = endOfWeek(selected, { weekStartsOn: 1 });
   const { data } = useClassesRange(weekStart, weekEnd);
   const dayKey = format(selected, "yyyy-MM-dd");
-  const dayClasses = (data ?? []).filter((c) => c.class_date === dayKey);
+  const dayClasses = (data ?? []).filter((c) => c.session_date === dayKey);
   const scale = useTimeScale(dayClasses);
   const [quick, setQuick] = useState<ClassRow | null>(null);
 
@@ -254,8 +275,8 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
             const endMin = startMin + dur;
             const top = scale.y(startMin);
             const height = Math.max(34, scale.y(endMin) - top - 4);
-            const enrolled = c.class_attendees?.length ?? 0;
-            const attended = (c.class_attendees ?? []).filter((a) => a.status === "asistio").length;
+            const enrolled = c.class_bookings?.length ?? 0;
+            const attended = (c.class_bookings ?? []).filter((a) => a.status === "asistio").length;
             const end = `${String(Math.floor(endMin / 60) % 24).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
             const widthPct = 100 / cols;
             return (
@@ -278,8 +299,8 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
                 <p className="truncate text-[11px] leading-tight text-muted-foreground">
                   {c.start_time.slice(0, 5)} - {end}
                 </p>
-                {c.coach?.full_name && height > 52 && (
-                  <p className="truncate text-[11px] leading-tight text-muted-foreground/80">{c.coach.full_name}</p>
+                {c.coach?.name && height > 52 && (
+                  <p className="truncate text-[11px] leading-tight text-muted-foreground/80">{c.coach.name}</p>
                 )}
               </button>
             );
@@ -287,7 +308,7 @@ function WeekView({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
         </div>
 
         <ClassQuickView
-          c={quick ? { ...quick, enrolled: quick.class_attendees?.length ?? 0, attended: (quick.class_attendees ?? []).filter((a) => a.status === "asistio").length } : null}
+          c={quick ? { ...quick, enrolled: quick.class_bookings?.length ?? 0, attended: (quick.class_bookings ?? []).filter((a) => a.status === "asistio").length } : null}
           open={!!quick}
           onOpenChange={(v) => !v && setQuick(null)}
         />
@@ -306,9 +327,9 @@ function MonthView({ selected, onSelect }: { selected: Date; onSelect: (d: Date)
   const gridStart = startOfWeek(startOfMonth(cursor), { weekStartsOn: 1 });
   const gridEnd = endOfWeek(endOfMonth(cursor), { weekStartsOn: 1 });
   const { data } = useClassesRange(gridStart, gridEnd);
-  const withClasses = new Set((data ?? []).map((c) => c.class_date));
+  const withClasses = new Set((data ?? []).map((c) => c.session_date));
   const dayKey = format(selected, "yyyy-MM-dd");
-  const dayClasses = (data ?? []).filter((c) => c.class_date === dayKey);
+  const dayClasses = (data ?? []).filter((c) => c.session_date === dayKey);
   const [quick, setQuick] = useState<ClassRow | null>(null);
 
 
@@ -372,7 +393,7 @@ function MonthView({ selected, onSelect }: { selected: Date; onSelect: (d: Date)
       )}
 
       <ClassQuickView
-        c={quick ? { ...quick, enrolled: quick.class_attendees?.length ?? 0, attended: (quick.class_attendees ?? []).filter((a) => a.status === "asistio").length } : null}
+        c={quick ? { ...quick, enrolled: quick.class_bookings?.length ?? 0, attended: (quick.class_bookings ?? []).filter((a) => a.status === "asistio").length } : null}
         open={!!quick}
         onOpenChange={(v: boolean) => !v && setQuick(null)}
       />
@@ -381,8 +402,8 @@ function MonthView({ selected, onSelect }: { selected: Date; onSelect: (d: Date)
 }
 
 function ClassCard({ c, onQuick }: { c: ClassRow; onQuick: () => void }) {
-  const enrolled = c.class_attendees?.length ?? 0;
-  const attended = (c.class_attendees ?? []).filter((a) => a.status === "asistio").length;
+  const enrolled = c.class_bookings?.length ?? 0;
+  const attended = (c.class_bookings ?? []).filter((a) => a.status === "asistio").length;
   const [h, m] = c.start_time.split(":").map(Number);
   const endMin = h * 60 + m + (c.duration_minutes || 60);
   const end = `${String(Math.floor(endMin / 60) % 24).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
@@ -397,7 +418,7 @@ function ClassCard({ c, onQuick }: { c: ClassRow; onQuick: () => void }) {
         <p className="truncate text-[11px] text-muted-foreground">
           {c.start_time.slice(0, 5)} - {end}
         </p>
-        {c.coach?.full_name && <p className="truncate text-[11px] text-muted-foreground">{c.coach.full_name}</p>}
+        {c.coach?.name && <p className="truncate text-[11px] text-muted-foreground">{c.coach.name}</p>}
       </div>
       <span className="shrink-0 text-xs font-bold text-primary">{attended}/{enrolled}</span>
     </button>
@@ -410,9 +431,10 @@ function ClassCard({ c, onQuick }: { c: ClassRow; onQuick: () => void }) {
 function AddClassFab({ defaultDate }: { defaultDate: string }) {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const [form, setForm] = useState({
     name: "",
-    class_date: defaultDate,
+    session_date: defaultDate,
     start_time: "07:00",
     duration_minutes: 60,
     capacity: 15,
@@ -426,7 +448,7 @@ function AddClassFab({ defaultDate }: { defaultDate: string }) {
   const [weeksAhead, setWeeksAhead] = useState(8);
 
   const baseDow = (() => {
-    try { return parseISO(form.class_date).getDay(); } catch { return new Date().getDay(); }
+    try { return parseISO(form.session_date).getDay(); } catch { return new Date().getDay(); }
   })();
 
   const toggleDay = (d: number) => {
@@ -436,27 +458,28 @@ function AddClassFab({ defaultDate }: { defaultDate: string }) {
   const openChange = (v: boolean) => {
     setOpen(v);
     if (v) {
-      setForm((f) => ({ ...f, class_date: defaultDate }));
+      setForm((f) => ({ ...f, session_date: defaultDate }));
       setSelectedDays([baseDow]);
     }
   };
 
   const { data: coaches } = useQuery({
-    queryKey: ["coaches"],
-    queryFn: async () => (await supabase.from("coaches").select("id, full_name").order("full_name")).data ?? [],
+    queryKey: ["coaches", boxId],
+    queryFn: async () => (await supabase.from("coaches").select("id, name").eq("box_id", boxId).order("name")).data ?? [],
   });
   const mut = useMutation({
     mutationFn: async () => {
-      const base = parseISO(form.class_date);
+      const base = parseISO(form.session_date);
       const common = {
+        box_id: boxId,
         name: form.name === "otro" ? customName.trim() : form.name,
         start_time: form.start_time,
         duration_minutes: form.duration_minutes,
         capacity: form.capacity,
-        level: form.level as "todos",
+        level: form.level,
         coach_id: form.coach_id || null,
       };
-      const rows: Array<typeof common & { class_date: string }> = [];
+      const rows: Array<typeof common & { session_date: string }> = [];
       if (repeatWeekly && selectedDays.length > 0) {
         const seen = new Set<string>();
         for (let w = 0; w < weeksAhead; w++) {
@@ -468,13 +491,13 @@ function AddClassFab({ defaultDate }: { defaultDate: string }) {
             const key = format(d, "yyyy-MM-dd");
             if (seen.has(key)) continue;
             seen.add(key);
-            rows.push({ ...common, class_date: key });
+            rows.push({ ...common, session_date: key });
           }
         }
       } else {
-        rows.push({ ...common, class_date: form.class_date });
+        rows.push({ ...common, session_date: form.session_date });
       }
-      const { error } = await supabase.from("classes").insert(rows);
+      const { error } = await supabase.from("class_sessions").insert(rows);
       if (error) throw error;
       return rows.length;
     },
@@ -542,7 +565,7 @@ function AddClassFab({ defaultDate }: { defaultDate: string }) {
             )}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Fecha</Label><Input type="date" value={form.class_date} onChange={(e) => setForm({ ...form, class_date: e.target.value })} /></div>
+            <div><Label>Fecha</Label><Input type="date" value={form.session_date} onChange={(e) => setForm({ ...form, session_date: e.target.value })} /></div>
             <div><Label>Hora</Label><Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -566,7 +589,7 @@ function AddClassFab({ defaultDate }: { defaultDate: string }) {
             <Select value={form.coach_id} onValueChange={(v) => setForm({ ...form, coach_id: v })}>
               <SelectTrigger><SelectValue placeholder="(opcional)" /></SelectTrigger>
               <SelectContent>
-                {(coaches ?? []).map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
+                {(coaches ?? []).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

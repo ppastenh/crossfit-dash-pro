@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,16 +42,18 @@ function genCode() {
 
 function InvitesPage() {
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const [email, setEmail] = useState("");
   const [days, setDays] = useState<string>("7");
-  const [role, setRole] = useState<"admin" | "coach">("admin");
+  const [role, setRole] = useState<"box_admin" | "coach">("box_admin");
 
   const { data: invites = [], isLoading } = useQuery({
-    queryKey: ["admin_invites"],
+    queryKey: ["admin_invites", boxId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("admin_invites")
         .select("id, code, email, expires_at, used_at, created_at, role")
+        .eq("box_id", boxId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as Invite[];
@@ -66,9 +69,11 @@ function InvitesPage() {
           : null;
       const { data: userRes } = await supabase.auth.getUser();
       const { error } = await supabase.from("admin_invites").insert({
+        box_id: boxId,
         code,
         role,
-        email: email.trim() || null,
+        // "" = sin restricción de email (cualquiera con el código lo puede canjear)
+        email: email.trim(),
         expires_at,
         created_by: userRes.user?.id ?? null,
       });
@@ -85,7 +90,7 @@ function InvitesPage() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("admin_invites").delete().eq("id", id);
+      const { error } = await supabase.from("admin_invites").delete().eq("box_id", boxId).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -111,7 +116,7 @@ function InvitesPage() {
           <div className="space-y-1.5">
             <Label className="text-xs">Tipo de acceso</Label>
             <div className="grid grid-cols-2 gap-2">
-              {(["admin", "coach"] as const).map((r) => (
+              {(["box_admin", "coach"] as const).map((r) => (
                 <button
                   key={r}
                   type="button"
@@ -120,7 +125,7 @@ function InvitesPage() {
                     role === r ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"
                   }`}
                 >
-                  {r === "admin" ? "Administrador" : "Coach"}
+                  {r === "box_admin" ? "Administrador" : "Coach"}
                 </button>
               ))}
             </div>
@@ -189,7 +194,7 @@ function InvitesPage() {
                         </code>
                         <StatusChip status={status} />
                         <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold capitalize text-muted-foreground">
-                          {inv.role === "coach" ? "Coach" : "Admin"}
+                          {inv.role === "coach" ? "Coach" : "Administrador"}
                         </span>
                       </div>
                       <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">

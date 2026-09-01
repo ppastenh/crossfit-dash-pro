@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
+import { makeWodplaceUserId } from "@/lib/ids";
 import { useState } from "react";
 import {
   Search, Plus, User, Copy, RefreshCw, MessageCircle, Check, X,
@@ -35,6 +37,7 @@ type Status = "todos" | "activo" | "pausado" | "suspendido" | "vencido" | "bloqu
 type MemberStatus = "activo" | "pausado" | "suspendido" | "vencido" | "bloqueado";
 
 export type MemberListItem = {
+  /** box_members.user_id (a wodplace_users.id — text). */
   id: string;
   full_name: string;
   status: string;
@@ -45,22 +48,52 @@ export type MemberListItem = {
   plan?: { name: string } | null;
 };
 
+type MemberRow_ = {
+  user_id: string;
+  status: string;
+  next_payment_at: string | null;
+  photo_url: string | null;
+  phone: string | null;
+  wodplace_users: { name: string; email: string } | null;
+  plans: { name: string } | null;
+};
+
+function toItem(r: MemberRow_): MemberListItem {
+  return {
+    id: r.user_id,
+    full_name: r.wodplace_users?.name ?? "—",
+    email: r.wodplace_users?.email ?? null,
+    status: r.status,
+    next_payment: r.next_payment_at,
+    photo_url: r.photo_url,
+    phone: r.phone,
+    plan: r.plans,
+  };
+}
+
 function MembersPage() {
+  const { boxId } = useBox();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<Status>("todos");
 
   const { data: plans } = useQuery({
-    queryKey: ["plans"],
-    queryFn: async () => (await supabase.from("plans").select("id, name, price, duration_days").order("name")).data ?? [],
+    queryKey: ["plans", boxId],
+    queryFn: async () =>
+      (await supabase.from("plans").select("id, name, price, duration_days").eq("box_id", boxId).order("name")).data ?? [],
   });
 
   const members = useQuery({
-    queryKey: ["members", q, status],
+    queryKey: ["members", boxId, q, status],
     queryFn: async () => {
-      let query = supabase.from("members").select("id, full_name, status, next_payment, photo_url, phone, email, plan:plan_id(name)").order("full_name");
+      let query = supabase
+        .from("box_members")
+        .select("user_id, status, next_payment_at, photo_url, phone, wodplace_users!inner(name, email), plans(name)")
+        .eq("box_id", boxId)
+        .order("name", { referencedTable: "wodplace_users" });
       if (status !== "todos") query = query.eq("status", status);
-      if (q) query = query.ilike("full_name", `%${q}%`);
-      return (await query).data ?? [];
+      if (q) query = query.ilike("wodplace_users.name", `%${q}%`);
+      const { data } = await query;
+      return ((data ?? []) as unknown as MemberRow_[]).map(toItem);
     },
   });
 
@@ -92,7 +125,7 @@ function MembersPage() {
           </div>
         )}
         {members.data?.map((m) => (
-          <MemberRow key={m.id} m={m as MemberListItem} />
+          <MemberRow key={m.id} m={m} />
         ))}
       </div>
 
@@ -257,10 +290,15 @@ function MemberActionsSheet({
   onOpenChange: (v: boolean) => void;
 }) {
   const qc = useQueryClient();
+  const { boxId } = useBox();
 
   const setStatus = useMutation({
     mutationFn: async (status: MemberStatus) => {
-      const { error } = await supabase.from("members").update({ status }).eq("id", m.id);
+      const { error } = await supabase
+        .from("box_members")
+        .update({ status })
+        .eq("box_id", boxId)
+        .eq("user_id", m.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -274,7 +312,11 @@ function MemberActionsSheet({
 
   const remove = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("members").delete().eq("id", m.id);
+      const { error } = await supabase
+        .from("box_members")
+        .delete()
+        .eq("box_id", boxId)
+        .eq("user_id", m.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -349,12 +391,21 @@ function AddMemberFab({ plans }: { plans: Array<{ id: string; name: string }> })
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ full_name: "", email: "", phone: "", plan_id: "" });
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const mut = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("members").insert({
-        full_name: form.full_name,
-        email: form.email || null,
-        phone: form.phone || null,
+      const email = form.email.trim();
+      if (!email) throw new Error("El email es obligatorio");
+      const userId = makeWodplaceUserId();
+      const { error: userErr } = await supabase
+        .from("wodplace_users")
+        .insert({ id: userId, name: form.full_name.trim(), email });
+      if (userErr) throw userErr;
+
+      const { error } = await supabase.from("box_members").insert({
+        box_id: boxId,
+        user_id: userId,
+        phone: form.phone.trim() || null,
         plan_id: form.plan_id || null,
       });
       if (error) throw error;
@@ -379,7 +430,7 @@ function AddMemberFab({ plans }: { plans: Array<{ id: string; name: string }> })
         <DialogHeader><DialogTitle>Nuevo miembro</DialogTitle></DialogHeader>
         <form onSubmit={(e) => { e.preventDefault(); mut.mutate(); }} className="space-y-3">
           <div><Label>Nombre completo</Label><Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
-          <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+          <div><Label>Email</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
           <div><Label>Teléfono</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
           <div>
             <Label>Plan</Label>
@@ -399,14 +450,24 @@ function AddMemberFab({ plans }: { plans: Array<{ id: string; name: string }> })
   );
 }
 
+// Debe coincidir con lo que busca el endpoint de canje de la app móvil
+// (WODPLACE api-server → POST /box-memberships/redeem → box_settings.key).
+const INVITE_CODE_KEY = "invite_code";
+
 function BoxInviteCard() {
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const { data, isLoading } = useQuery({
-    queryKey: ["box_settings"],
+    queryKey: ["box_settings", boxId, INVITE_CODE_KEY],
     queryFn: async () => {
-      const { data, error } = await supabase.from("box_settings").select("id, invite_code").limit(1).maybeSingle();
+      const { data, error } = await supabase
+        .from("box_settings")
+        .select("value")
+        .eq("box_id", boxId)
+        .eq("key", INVITE_CODE_KEY)
+        .maybeSingle();
       if (error) throw error;
-      return data;
+      return data?.value ?? null;
     },
   });
 
@@ -417,23 +478,20 @@ function BoxInviteCard() {
       for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
       code += "-";
       for (let i = 0; i < 3; i++) code += chars[Math.floor(Math.random() * chars.length)];
-      if (!data?.id) {
-        const { error } = await supabase.from("box_settings").insert({ invite_code: code });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("box_settings").update({ invite_code: code }).eq("id", data.id);
-        if (error) throw error;
-      }
+      const { error } = await supabase
+        .from("box_settings")
+        .upsert({ box_id: boxId, key: INVITE_CODE_KEY, value: code }, { onConflict: "box_id,key" });
+      if (error) throw error;
       return code;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["box_settings"] });
+      qc.invalidateQueries({ queryKey: ["box_settings", boxId, INVITE_CODE_KEY] });
       toast.success("Código regenerado");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
   });
 
-  const code = data?.invite_code ?? "—";
+  const code = data ?? "—";
 
   async function copy() {
     await navigator.clipboard.writeText(code);
@@ -479,33 +537,46 @@ function BoxInviteCard() {
 type Request = {
   id: string;
   full_name: string;
-  phone: string | null;
   email: string | null;
   created_at: string;
+  user_id: string;
+};
+
+type RequestRow_ = {
+  id: string;
+  created_at: string;
+  user_id: string;
+  wodplace_users: { name: string; email: string } | null;
 };
 
 function PendingRequests() {
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const { data: requests = [] } = useQuery({
-    queryKey: ["member_requests", "pendiente"],
+    queryKey: ["member_requests", boxId, "pendiente"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("member_requests")
-        .select("id, full_name, phone, email, created_at")
+        .select("id, created_at, user_id, wodplace_users(name, email)")
+        .eq("box_id", boxId)
         .eq("status", "pendiente")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Request[];
+      return ((data ?? []) as unknown as RequestRow_[]).map((r) => ({
+        id: r.id,
+        created_at: r.created_at,
+        user_id: r.user_id,
+        full_name: r.wodplace_users?.name ?? "—",
+        email: r.wodplace_users?.email ?? null,
+      })) satisfies Request[];
     },
   });
 
   const approve = useMutation({
     mutationFn: async (r: Request) => {
-      const { error: insErr } = await supabase.from("members").insert({
-        full_name: r.full_name,
-        phone: r.phone,
-        email: r.email,
-      });
+      const { error: insErr } = await supabase
+        .from("box_members")
+        .upsert({ box_id: boxId, user_id: r.user_id, status: "activo" }, { onConflict: "box_id,user_id" });
       if (insErr) throw insErr;
       const { error } = await supabase
         .from("member_requests")
@@ -550,8 +621,8 @@ function PendingRequests() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{r.full_name}</p>
-              {(r.phone || r.email) && (
-                <p className="truncate text-[11px] text-muted-foreground">{r.phone ?? r.email}</p>
+              {r.email && (
+                <p className="truncate text-[11px] text-muted-foreground">{r.email}</p>
               )}
             </div>
             <button

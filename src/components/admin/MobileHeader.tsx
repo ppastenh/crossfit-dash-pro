@@ -2,6 +2,26 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronLeft, Dumbbell } from "lucide-react";
 import type { ReactNode } from "react";
 import { NotificationsBell } from "./NotificationsBell";
+import { useBox } from "@/lib/box-context";
+
+function BoxSwitcher() {
+  const { boxId, boxes, setBoxId } = useBox();
+  if (boxes.length <= 1) return null;
+  return (
+    <select
+      value={boxId}
+      onChange={(e) => setBoxId(e.target.value)}
+      aria-label="Box activo"
+      className="max-w-[38vw] shrink truncate rounded-full border border-border bg-secondary px-3 py-1.5 text-xs font-semibold text-foreground"
+    >
+      {boxes.map((b) => (
+        <option key={b.id} value={b.id}>
+          {b.name}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 
 type Props = {
@@ -33,6 +53,7 @@ export function MobileHeader({ title, showBack, right }: Props) {
         )}
         {title && <h1 className="min-w-0 flex-1 truncate text-base font-semibold">{title}</h1>}
         {!title && <div className="flex-1" />}
+        <BoxSwitcher />
         <NotificationsBell />
         {right}
 

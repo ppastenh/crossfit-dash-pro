@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ImagePlus, Megaphone, Send, Trash2, X } from "lucide-react";
 import { AnnouncementImage } from "@/components/admin/NotificationsBell";
+import { useBox } from "@/lib/box-context";
+import { randomKey } from "@/lib/ids";
 import {
   fetchAnnouncements,
   formatDate,
@@ -33,6 +35,7 @@ const DAY_OPTIONS = [1, 3, 7];
 
 function NotificationsPage() {
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
@@ -43,7 +46,7 @@ function NotificationsPage() {
   const [banner, setBanner] = useState(true);
   const [days, setDays] = useState(3);
 
-  const { data: items = [], isLoading } = useQuery({ queryKey: ["announcements"], queryFn: fetchAnnouncements });
+  const { data: items = [], isLoading } = useQuery({ queryKey: ["announcements", boxId], queryFn: () => fetchAnnouncements(boxId) });
 
   function pickFile(f: File | null) {
     if (f && f.size > 10 * 1024 * 1024) {
@@ -62,7 +65,7 @@ function NotificationsPage() {
       let imagePath: string | null = null;
       if (file) {
         const ext = file.name.split(".").pop() ?? "jpg";
-        const path = `${crypto.randomUUID()}.${ext}`;
+        const path = `${boxId}/${randomKey()}.${ext}`;
         const { error: upErr } = await supabase.storage.from("announcements").upload(path, file, { contentType: file.type });
         if (upErr) throw upErr;
         imagePath = path;
@@ -70,8 +73,9 @@ function NotificationsPage() {
 
       const expires = banner ? new Date(Date.now() + days * 86400000).toISOString() : null;
       const { error } = await supabase.from("announcements").insert({
+        box_id: boxId,
         title: title.trim(),
-        body: body.trim() || null,
+        body: body.trim(),
         image_url: imagePath,
         send_push: push,
         show_banner: banner,
@@ -93,7 +97,7 @@ function NotificationsPage() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("announcements").delete().eq("id", id);
+      const { error } = await supabase.from("announcements").delete().eq("box_id", boxId).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

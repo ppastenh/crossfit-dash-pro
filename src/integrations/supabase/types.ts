@@ -12,60 +12,134 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_invites: {
         Row: {
-          code: string
+          box_id: string
+          code: string | null
           created_at: string
           created_by: string | null
-          email: string | null
+          email: string
           expires_at: string | null
           id: string
           role: string
+          status: string
           used_at: string | null
           used_by: string | null
         }
         Insert: {
-          code: string
+          box_id: string
+          code?: string | null
           created_at?: string
           created_by?: string | null
-          email?: string | null
+          email: string
           expires_at?: string | null
           id?: string
           role?: string
+          status?: string
           used_at?: string | null
           used_by?: string | null
         }
         Update: {
-          code?: string
+          box_id?: string
+          code?: string | null
           created_at?: string
           created_by?: string | null
-          email?: string | null
+          email?: string
           expires_at?: string | null
           id?: string
           role?: string
+          status?: string
           used_at?: string | null
           used_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "admin_invites_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_pins: {
+        Row: {
+          created_at: string
+          failed_attempts: number
+          locked_until: string | null
+          pin_hash: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          failed_attempts?: number
+          locked_until?: string | null
+          pin_hash: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          failed_attempts?: number
+          locked_until?: string | null
+          pin_hash?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_pins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       announcement_reads: {
         Row: {
           announcement_id: string
-          id: string
+          box_id: string
           read_at: string
           user_id: string
         }
         Insert: {
           announcement_id: string
-          id?: string
+          box_id: string
           read_at?: string
           user_id: string
         }
         Update: {
           announcement_id?: string
-          id?: string
+          box_id?: string
           read_at?: string
           user_id?: string
         }
@@ -77,13 +151,20 @@ export type Database = {
             referencedRelation: "announcements"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "announcement_reads_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       announcements: {
         Row: {
           banner_days: number
-          body: string | null
-          category: string
+          body: string
+          box_id: string
           created_at: string
           created_by: string | null
           expires_at: string | null
@@ -92,13 +173,11 @@ export type Database = {
           send_push: boolean
           show_banner: boolean
           title: string
-          topic: string | null
-          updated_at: string
         }
         Insert: {
           banner_days?: number
-          body?: string | null
-          category?: string
+          body: string
+          box_id: string
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
@@ -107,13 +186,11 @@ export type Database = {
           send_push?: boolean
           show_banner?: boolean
           title: string
-          topic?: string | null
-          updated_at?: string
         }
         Update: {
           banner_days?: number
-          body?: string | null
-          category?: string
+          body?: string
+          box_id?: string
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
@@ -122,144 +199,378 @@ export type Database = {
           send_push?: boolean
           show_banner?: boolean
           title?: string
-          topic?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      attendance: {
-        Row: {
-          checked_in_at: string
-          id: string
-          member_id: string
-          notes: string | null
-        }
-        Insert: {
-          checked_in_at?: string
-          id?: string
-          member_id: string
-          notes?: string | null
-        }
-        Update: {
-          checked_in_at?: string
-          id?: string
-          member_id?: string
-          notes?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "attendance_member_id_fkey"
-            columns: ["member_id"]
+            foreignKeyName: "announcements_box_id_fkey"
+            columns: ["box_id"]
             isOneToOne: false
-            referencedRelation: "members"
+            referencedRelation: "boxes"
             referencedColumns: ["id"]
           },
         ]
       }
-      box_settings: {
+      attendance: {
         Row: {
-          created_at: string
+          attended_at: string
+          box_id: string
+          class_id: string | null
           id: string
-          invite_code: string
-          updated_at: string
+          user_id: string
         }
         Insert: {
-          created_at?: string
+          attended_at?: string
+          box_id: string
+          class_id?: string | null
           id?: string
-          invite_code: string
-          updated_at?: string
+          user_id: string
         }
         Update: {
-          created_at?: string
+          attended_at?: string
+          box_id?: string
+          class_id?: string | null
           id?: string
-          invite_code?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      class_attendees: {
-        Row: {
-          class_id: string
-          created_at: string
-          id: string
-          member_id: string
-          status: Database["public"]["Enums"]["attendee_status"]
-        }
-        Insert: {
-          class_id: string
-          created_at?: string
-          id?: string
-          member_id: string
-          status?: Database["public"]["Enums"]["attendee_status"]
-        }
-        Update: {
-          class_id?: string
-          created_at?: string
-          id?: string
-          member_id?: string
-          status?: Database["public"]["Enums"]["attendee_status"]
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "class_attendees_class_id_fkey"
+            foreignKeyName: "attendance_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_class_id_fkey"
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "class_attendees_member_id_fkey"
-            columns: ["member_id"]
+            foreignKeyName: "attendance_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "members"
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blocked_users: {
+        Row: {
+          blocked_at: string
+          box_id: string
+          user_id: string
+        }
+        Insert: {
+          blocked_at?: string
+          box_id: string
+          user_id: string
+        }
+        Update: {
+          blocked_at?: string
+          box_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_users_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_users_user_id_wodplace_users_id_fk"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      box_members: {
+        Row: {
+          box_id: string
+          created_at: string
+          joined_at: string
+          next_payment_at: string | null
+          notes: string | null
+          phone: string | null
+          photo_url: string | null
+          plan_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          box_id: string
+          created_at?: string
+          joined_at?: string
+          next_payment_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          plan_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          box_id?: string
+          created_at?: string
+          joined_at?: string
+          next_payment_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          plan_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "box_members_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "box_members_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "box_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      box_settings: {
+        Row: {
+          box_id: string
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          box_id: string
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          box_id?: string
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "box_settings_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boxes: {
+        Row: {
+          created_at: string
+          id: string
+          location: string | null
+          name: string
+          owner_user_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location?: string | null
+          name: string
+          owner_user_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location?: string | null
+          name?: string
+          owner_user_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boxes_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_bookings: {
+        Row: {
+          box_id: string
+          created_at: string
+          id: string
+          session_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          box_id: string
+          created_at?: string
+          id?: string
+          session_id: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          box_id?: string
+          created_at?: string
+          id?: string
+          session_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_bookings_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_bookings_user_id_wodplace_users_id_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_sessions: {
+        Row: {
+          box_id: string
+          capacity: number
+          class_id: string | null
+          coach_id: string | null
+          created_at: string
+          duration_minutes: number
+          id: string
+          level: string
+          name: string
+          session_date: string
+          start_time: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          box_id: string
+          capacity?: number
+          class_id?: string | null
+          coach_id?: string | null
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          level?: string
+          name: string
+          session_date: string
+          start_time: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          box_id?: string
+          capacity?: number
+          class_id?: string | null
+          coach_id?: string | null
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          level?: string
+          name?: string
+          session_date?: string
+          start_time?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_sessions_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_sessions_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_sessions_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
             referencedColumns: ["id"]
           },
         ]
       }
       classes: {
         Row: {
+          box_id: string
           capacity: number
-          class_date: string
           coach_id: string | null
           created_at: string
-          description: string | null
-          duration_minutes: number
+          day_of_week: number | null
           id: string
-          level: Database["public"]["Enums"]["class_level"]
           name: string
-          start_time: string
-          status: Database["public"]["Enums"]["class_status"]
-          updated_at: string
+          start_time: string | null
         }
         Insert: {
+          box_id: string
           capacity?: number
-          class_date: string
           coach_id?: string | null
           created_at?: string
-          description?: string | null
-          duration_minutes?: number
+          day_of_week?: number | null
           id?: string
-          level?: Database["public"]["Enums"]["class_level"]
           name: string
-          start_time: string
-          status?: Database["public"]["Enums"]["class_status"]
-          updated_at?: string
+          start_time?: string | null
         }
         Update: {
+          box_id?: string
           capacity?: number
-          class_date?: string
           coach_id?: string | null
           created_at?: string
-          description?: string | null
-          duration_minutes?: number
+          day_of_week?: number | null
           id?: string
-          level?: Database["public"]["Enums"]["class_level"]
           name?: string
-          start_time?: string
-          status?: Database["public"]["Enums"]["class_status"]
-          updated_at?: string
+          start_time?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "classes_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "classes_coach_id_fkey"
             columns: ["coach_id"]
@@ -271,10 +582,11 @@ export type Database = {
       }
       coaches: {
         Row: {
+          box_id: string
           created_at: string
           email: string | null
-          full_name: string
           id: string
+          name: string
           permissions: Json
           phone: string | null
           photo_url: string | null
@@ -284,10 +596,11 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          box_id: string
           created_at?: string
           email?: string | null
-          full_name: string
           id?: string
+          name: string
           permissions?: Json
           phone?: string | null
           photo_url?: string | null
@@ -297,10 +610,11 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          box_id?: string
           created_at?: string
           email?: string | null
-          full_name?: string
           id?: string
+          name?: string
           permissions?: Json
           phone?: string | null
           photo_url?: string | null
@@ -308,159 +622,190 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string | null
-        }
-        Relationships: []
-      }
-      contract_acceptances: {
-        Row: {
-          accepted_at: string
-          contract_id: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          accepted_at?: string
-          contract_id: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          accepted_at?: string
-          contract_id?: string
-          id?: string
-          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "contract_acceptances_contract_id_fkey"
-            columns: ["contract_id"]
+            foreignKeyName: "coaches_box_id_fkey"
+            columns: ["box_id"]
             isOneToOne: false
-            referencedRelation: "contracts"
+            referencedRelation: "boxes"
             referencedColumns: ["id"]
           },
         ]
       }
-      contracts: {
+      contract_acceptances: {
         Row: {
+          accepted_at: string
+          box_id: string
+          emergency_contact_name: string
+          emergency_contact_phone: string
+          guardian_name: string | null
+          guardian_relationship: string | null
+          seen_by_owner_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at: string
+          box_id: string
+          emergency_contact_name: string
+          emergency_contact_phone: string
+          guardian_name?: string | null
+          guardian_relationship?: string | null
+          seen_by_owner_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          box_id?: string
+          emergency_contact_name?: string
+          emergency_contact_phone?: string
+          guardian_name?: string | null
+          guardian_relationship?: string | null
+          seen_by_owner_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_acceptances_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_acceptances_user_id_wodplace_users_id_fk"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_documents: {
+        Row: {
+          box_id: string
           created_at: string
           doc_type: string
-          file_name: string
+          file_name: string | null
           id: string
-          mime_type: string
-          storage_path: string
+          mime_type: string | null
+          object_path: string | null
+          slug: string
           title: string
           updated_at: string
-          uploaded_by: string | null
         }
         Insert: {
+          box_id: string
           created_at?: string
           doc_type?: string
-          file_name: string
+          file_name?: string | null
           id?: string
-          mime_type: string
-          storage_path: string
+          mime_type?: string | null
+          object_path?: string | null
+          slug: string
           title: string
           updated_at?: string
-          uploaded_by?: string | null
         }
         Update: {
+          box_id?: string
           created_at?: string
           doc_type?: string
-          file_name?: string
+          file_name?: string | null
           id?: string
-          mime_type?: string
-          storage_path?: string
+          mime_type?: string | null
+          object_path?: string | null
+          slug?: string
           title?: string
-          updated_at?: string
-          uploaded_by?: string | null
-        }
-        Relationships: []
-      }
-      member_requests: {
-        Row: {
-          code_used: string | null
-          created_at: string
-          email: string | null
-          full_name: string
-          id: string
-          notes: string | null
-          phone: string | null
-          status: Database["public"]["Enums"]["request_status"]
-          updated_at: string
-        }
-        Insert: {
-          code_used?: string | null
-          created_at?: string
-          email?: string | null
-          full_name: string
-          id?: string
-          notes?: string | null
-          phone?: string | null
-          status?: Database["public"]["Enums"]["request_status"]
-          updated_at?: string
-        }
-        Update: {
-          code_used?: string | null
-          created_at?: string
-          email?: string | null
-          full_name?: string
-          id?: string
-          notes?: string | null
-          phone?: string | null
-          status?: Database["public"]["Enums"]["request_status"]
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      members: {
-        Row: {
-          created_at: string
-          email: string | null
-          full_name: string
-          id: string
-          join_date: string
-          next_payment: string | null
-          notes: string | null
-          phone: string | null
-          photo_url: string | null
-          plan_id: string | null
-          status: Database["public"]["Enums"]["member_status"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          email?: string | null
-          full_name: string
-          id?: string
-          join_date?: string
-          next_payment?: string | null
-          notes?: string | null
-          phone?: string | null
-          photo_url?: string | null
-          plan_id?: string | null
-          status?: Database["public"]["Enums"]["member_status"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string | null
-          full_name?: string
-          id?: string
-          join_date?: string
-          next_payment?: string | null
-          notes?: string | null
-          phone?: string | null
-          photo_url?: string | null
-          plan_id?: string | null
-          status?: Database["public"]["Enums"]["member_status"]
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "members_plan_id_fkey"
-            columns: ["plan_id"]
+            foreignKeyName: "contract_documents_box_id_fkey"
+            columns: ["box_id"]
             isOneToOne: false
-            referencedRelation: "plans"
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_read_progress: {
+        Row: {
+          box_id: string
+          document_slug: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          box_id: string
+          document_slug: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          box_id?: string
+          document_slug?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_read_progress_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_read_progress_document_slug_contract_documents_slug_fk"
+            columns: ["document_slug"]
+            isOneToOne: false
+            referencedRelation: "contract_documents"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "contract_read_progress_user_id_wodplace_users_id_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_requests: {
+        Row: {
+          box_id: string
+          created_at: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          box_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          box_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_requests_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
             referencedColumns: ["id"]
           },
         ]
@@ -468,43 +813,63 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          box_id: string
           created_at: string
-          due_date: string | null
           id: string
-          member_id: string
           method: string | null
+          next_payment_at: string | null
           notes: string | null
           paid_at: string | null
-          status: Database["public"]["Enums"]["payment_status"]
+          plan_id: string | null
+          status: string
+          user_id: string
         }
         Insert: {
           amount: number
+          box_id: string
           created_at?: string
-          due_date?: string | null
           id?: string
-          member_id: string
           method?: string | null
+          next_payment_at?: string | null
           notes?: string | null
           paid_at?: string | null
-          status?: Database["public"]["Enums"]["payment_status"]
+          plan_id?: string | null
+          status?: string
+          user_id: string
         }
         Update: {
           amount?: number
+          box_id?: string
           created_at?: string
-          due_date?: string | null
           id?: string
-          member_id?: string
           method?: string | null
+          next_payment_at?: string | null
           notes?: string | null
           paid_at?: string | null
-          status?: Database["public"]["Enums"]["payment_status"]
+          plan_id?: string | null
+          status?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "payments_member_id_fkey"
-            columns: ["member_id"]
+            foreignKeyName: "payments_box_id_fkey"
+            columns: ["box_id"]
             isOneToOne: false
-            referencedRelation: "members"
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
             referencedColumns: ["id"]
           },
         ]
@@ -512,6 +877,8 @@ export type Database = {
       plans: {
         Row: {
           benefits: string[]
+          billing_period: string | null
+          box_id: string
           created_at: string
           description: string | null
           duration_days: number
@@ -519,11 +886,13 @@ export type Database = {
           is_active: boolean
           is_featured: boolean
           name: string
-          price: number
+          price: number | null
           updated_at: string
         }
         Insert: {
           benefits?: string[]
+          billing_period?: string | null
+          box_id: string
           created_at?: string
           description?: string | null
           duration_days?: number
@@ -531,11 +900,13 @@ export type Database = {
           is_active?: boolean
           is_featured?: boolean
           name: string
-          price?: number
+          price?: number | null
           updated_at?: string
         }
         Update: {
           benefits?: string[]
+          billing_period?: string | null
+          box_id?: string
           created_at?: string
           description?: string | null
           duration_days?: number
@@ -543,91 +914,375 @@ export type Database = {
           is_active?: boolean
           is_featured?: boolean
           name?: string
-          price?: number
+          price?: number | null
           updated_at?: string
         }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          full_name: string | null
-          id: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          full_name?: string | null
-          id: string
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          full_name?: string | null
-          id?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "plans_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       prs: {
         Row: {
           achieved_at: string
+          box_id: string
           created_at: string
           id: string
           lift_name: string
-          member_id: string
           notes: string | null
           unit: string
+          user_id: string
           weight: number
         }
         Insert: {
           achieved_at?: string
+          box_id: string
           created_at?: string
           id?: string
           lift_name: string
-          member_id: string
           notes?: string | null
           unit?: string
+          user_id: string
           weight: number
         }
         Update: {
           achieved_at?: string
+          box_id?: string
           created_at?: string
           id?: string
           lift_name?: string
-          member_id?: string
           notes?: string | null
           unit?: string
+          user_id?: string
           weight?: number
         }
         Relationships: [
           {
-            foreignKeyName: "prs_member_id_fkey"
-            columns: ["member_id"]
+            foreignKeyName: "prs_box_id_fkey"
+            columns: ["box_id"]
             isOneToOne: false
-            referencedRelation: "members"
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_comments: {
+        Row: {
+          author_name: string
+          body: string
+          box_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          post_id: string
+          user_id: string | null
+        }
+        Insert: {
+          author_name: string
+          body: string
+          box_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id: string
+          post_id: string
+          user_id?: string | null
+        }
+        Update: {
+          author_name?: string
+          body?: string
+          box_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_comments_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_comments_post_id_social_posts_id_fk"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_comments_user_id_wodplace_users_id_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_posts: {
+        Row: {
+          author_name: string
+          body: string
+          box_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          image_uris: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          author_name: string
+          body?: string
+          box_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id: string
+          image_uris?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Update: {
+          author_name?: string
+          body?: string
+          box_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          image_uris?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_posts_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_posts_user_id_wodplace_users_id_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_reactions: {
+        Row: {
+          box_id: string
+          created_at: string
+          emoji: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          box_id: string
+          created_at?: string
+          emoji: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          box_id?: string
+          created_at?: string
+          emoji?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_reactions_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_reactions_post_id_social_posts_id_fk"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_reactions_user_id_wodplace_users_id_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_reports: {
+        Row: {
+          box_id: string
+          created_at: string
+          id: string
+          post_id: string
+          reason: string
+          reporter_id: string | null
+          reporter_name: string
+          resolved_at: string | null
+        }
+        Insert: {
+          box_id: string
+          created_at?: string
+          id: string
+          post_id: string
+          reason: string
+          reporter_id?: string | null
+          reporter_name: string
+          resolved_at?: string | null
+        }
+        Update: {
+          box_id?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          reason?: string
+          reporter_id?: string | null
+          reporter_name?: string
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_reports_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_reports_post_id_social_posts_id_fk"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_reports_reporter_id_wodplace_users_id_fk"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
             referencedColumns: ["id"]
           },
         ]
       }
       user_roles: {
         Row: {
+          box_id: string | null
           created_at: string
           id: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           user_id: string
         }
         Insert: {
+          box_id?: string | null
           created_at?: string
           id?: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           user_id: string
         }
         Update: {
+          box_id?: string | null
           created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role?: string
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wodplace_notifications: {
+        Row: {
+          body: string
+          box_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          box_id: string
+          created_at?: string
+          id: string
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          box_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wodplace_notifications_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wodplace_notifications_user_id_wodplace_users_id_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wodplace_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wodplace_users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -636,27 +1291,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      storage_box_prefix: { Args: { _name: string }; Returns: string }
+      user_is_box_staff: { Args: { _box_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "user" | "coach"
-      attendee_status: "inscrito" | "asistio" | "ausente" | "lista_espera"
-      class_level: "principiante" | "intermedio" | "avanzado" | "todos"
-      class_status: "programada" | "en_curso" | "finalizada" | "cancelada"
-      member_status:
-        | "activo"
-        | "suspendido"
-        | "vencido"
-        | "pausado"
-        | "bloqueado"
-      payment_status: "pagado" | "pendiente" | "vencido"
-      request_status: "pendiente" | "aprobado" | "rechazado"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -782,21 +1421,10 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
-    Enums: {
-      app_role: ["admin", "user", "coach"],
-      attendee_status: ["inscrito", "asistio", "ausente", "lista_espera"],
-      class_level: ["principiante", "intermedio", "avanzado", "todos"],
-      class_status: ["programada", "en_curso", "finalizada", "cancelada"],
-      member_status: [
-        "activo",
-        "suspendido",
-        "vencido",
-        "pausado",
-        "bloqueado",
-      ],
-      payment_status: ["pagado", "pendiente", "vencido"],
-      request_status: ["pendiente", "aprobado", "rechazado"],
-    },
+    Enums: {},
   },
 } as const

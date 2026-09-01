@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,11 @@ import { toast } from "sonner";
 type Cls = {
   id: string;
   name: string;
-  class_date: string;
+  session_date: string;
   start_time: string;
   capacity: number;
-  coach: { full_name: string } | null;
-  class_attendees: { id: string; member_id: string }[] | null;
+  coach: { name: string } | null;
+  bookings: { id: string; user_id: string }[];
 };
 
 export function BookClassSheet({
@@ -32,26 +33,44 @@ export function BookClassSheet({
 }) {
   const [q, setQ] = useState("");
   const qc = useQueryClient();
+  const { boxId } = useBox();
   const today = format(new Date(), "yyyy-MM-dd");
 
   const classes = useQuery({
-    queryKey: ["bookable-classes", today],
+    queryKey: ["bookable-classes", boxId, today],
     enabled: open,
-    queryFn: async () =>
-      ((await supabase
-        .from("classes")
-        .select("id, name, class_date, start_time, capacity, coach:coach_id(full_name), class_attendees(id, member_id)")
-        .gte("class_date", today)
-        .order("class_date")
+    queryFn: async () => {
+      const { data: sessions } = await supabase
+        .from("class_sessions")
+        .select("id, name, session_date, start_time, capacity, coach:coaches(name)")
+        .eq("box_id", boxId)
+        .gte("session_date", today)
+        .order("session_date")
         .order("start_time")
-        .limit(80)).data ?? []) as unknown as Cls[],
+        .limit(80);
+      const rows = (sessions ?? []) as unknown as Omit<Cls, "bookings">[];
+      if (rows.length === 0) return [] as Cls[];
+      const { data: bookings } = await supabase
+        .from("class_bookings")
+        .select("id, user_id, session_id")
+        .eq("box_id", boxId)
+        .in("session_id", rows.map((r) => r.id));
+      const bySession = new Map<string, { id: string; user_id: string }[]>();
+      for (const b of bookings ?? []) {
+        const arr = bySession.get(b.session_id) ?? [];
+        arr.push({ id: b.id, user_id: b.user_id });
+        bySession.set(b.session_id, arr);
+      }
+      return rows.map((r) => ({ ...r, bookings: bySession.get(r.id) ?? [] })) as Cls[];
+    },
   });
 
   const book = useMutation({
     mutationFn: async ({ classId, waitlist }: { classId: string; waitlist: boolean }) => {
-      const { error } = await supabase.from("class_attendees").insert({
-        class_id: classId,
-        member_id: memberId,
+      const { error } = await supabase.from("class_bookings").insert({
+        box_id: boxId,
+        session_id: classId,
+        user_id: memberId,
         status: waitlist ? "lista_espera" : "inscrito",
       });
       if (error) throw error;
@@ -59,14 +78,14 @@ export function BookClassSheet({
     onSuccess: (_d, v) => {
       toast.success(v.waitlist ? "Agregado como sobrecupo" : "Reservado");
       qc.invalidateQueries({ queryKey: ["bookable-classes"] });
-      qc.invalidateQueries({ queryKey: ["class-attendees"] });
+      qc.invalidateQueries({ queryKey: ["class-bookings"] });
       qc.invalidateQueries({ queryKey: ["classes-range"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
   });
 
   const list = (classes.data ?? []).filter((c) =>
-    (c.name + " " + (c.coach?.full_name ?? "")).toLowerCase().includes(q.toLowerCase())
+    (c.name + " " + (c.coach?.name ?? "")).toLowerCase().includes(q.toLowerCase())
   );
 
   return (
@@ -88,9 +107,9 @@ export function BookClassSheet({
               <p className="rounded-2xl border border-dashed p-4 text-center text-xs text-muted-foreground">Sin clases disponibles</p>
             )}
             {list.map((c) => {
-              const attendees = c.class_attendees ?? [];
+              const attendees = c.bookings ?? [];
               const enrolled = attendees.length;
-              const already = attendees.some((a) => a.member_id === memberId);
+              const already = attendees.some((a) => a.user_id === memberId);
               const full = enrolled >= (c.capacity ?? 0);
               return (
                 <div key={c.id} className="rounded-2xl border bg-card p-3">
@@ -100,10 +119,10 @@ export function BookClassSheet({
                       <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <CalendarDays className="h-3 w-3" />
-                          {format(parseISO(c.class_date), "EEE d MMM", { locale: es })}
+                          {format(parseISO(c.session_date), "EEE d MMM", { locale: es })}
                         </span>
                         <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{String(c.start_time).slice(0, 5)}</span>
-                        {c.coach?.full_name && <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" />{c.coach.full_name}</span>}
+                        {c.coach?.name && <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" />{c.coach.name}</span>}
                       </div>
                     </div>
                     <span className={`shrink-0 text-xs font-bold ${full ? "text-destructive" : "text-primary"}`}>

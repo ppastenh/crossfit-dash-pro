@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBox } from "@/lib/box-context";
 import { Avatar, StatusChip } from "./members";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -21,48 +22,71 @@ export const Route = createFileRoute("/_authenticated/_admin/members/$id")({
   component: MemberDetail,
 });
 
+type MemberDetailRow = {
+  user_id: string;
+  status: string;
+  phone: string | null;
+  photo_url: string | null;
+  notes: string | null;
+  joined_at: string | null;
+  next_payment_at: string | null;
+  wodplace_users: { name: string; email: string } | null;
+  plans: { name: string; price: number | null } | null;
+};
+
 function MemberDetail() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
+  const { boxId } = useBox();
 
   const member = useQuery({
-    queryKey: ["member", id],
-    queryFn: async () => (await supabase.from("members").select("*, plan:plan_id(name, price)").eq("id", id).maybeSingle()).data,
+    queryKey: ["member", boxId, id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("box_members")
+        .select("user_id, status, phone, photo_url, notes, joined_at, next_payment_at, wodplace_users(name, email), plans(name, price)")
+        .eq("box_id", boxId)
+        .eq("user_id", id)
+        .maybeSingle();
+      return (data as unknown as MemberDetailRow | null) ?? null;
+    },
   });
 
   const payments = useQuery({
-    queryKey: ["member-payments", id],
-    queryFn: async () => (await supabase.from("payments").select("*").eq("member_id", id).order("paid_at", { ascending: false }).limit(20)).data ?? [],
+    queryKey: ["member-payments", boxId, id],
+    queryFn: async () => (await supabase.from("payments").select("*").eq("box_id", boxId).eq("user_id", id).order("paid_at", { ascending: false }).limit(20)).data ?? [],
   });
 
   const attendance = useQuery({
-    queryKey: ["member-attendance", id],
-    queryFn: async () => (await supabase.from("attendance").select("*").eq("member_id", id).order("checked_in_at", { ascending: false }).limit(30)).data ?? [],
+    queryKey: ["member-attendance", boxId, id],
+    queryFn: async () => (await supabase.from("attendance").select("*").eq("box_id", boxId).eq("user_id", id).order("attended_at", { ascending: false }).limit(30)).data ?? [],
   });
 
   const prs = useQuery({
-    queryKey: ["member-prs", id],
-    queryFn: async () => (await supabase.from("prs").select("*").eq("member_id", id).order("achieved_at", { ascending: false })).data ?? [],
+    queryKey: ["member-prs", boxId, id],
+    queryFn: async () => (await supabase.from("prs").select("*").eq("box_id", boxId).eq("user_id", id).order("achieved_at", { ascending: false })).data ?? [],
   });
 
   const toggle = useMutation({
     mutationFn: async (newStatus: "activo" | "suspendido") => {
-      const { error } = await supabase.from("members").update({ status: newStatus }).eq("id", id);
+      const { error } = await supabase.from("box_members").update({ status: newStatus }).eq("box_id", boxId).eq("user_id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Actualizado"); qc.invalidateQueries({ queryKey: ["member", id] }); qc.invalidateQueries({ queryKey: ["members"] }); },
+    onSuccess: () => { toast.success("Actualizado"); qc.invalidateQueries({ queryKey: ["member", boxId, id] }); qc.invalidateQueries({ queryKey: ["members"] }); },
   });
 
   const m = member.data;
   if (!m) return <AdminShell title="Miembro" showBack><p className="p-6 text-center text-sm text-muted-foreground">{member.isLoading ? "Cargando..." : "No encontrado"}</p></AdminShell>;
 
+  const fullName = m.wodplace_users?.name ?? "—";
+
   return (
     <AdminShell title="Perfil" showBack>
       <div className="flex flex-col items-center rounded-3xl border bg-card p-5 text-center">
-        <Avatar name={m.full_name} url={m.photo_url} size={72} />
-        <h1 className="mt-3 text-xl font-black">{m.full_name}</h1>
+        <Avatar name={fullName} url={m.photo_url} size={72} />
+        <h1 className="mt-3 text-xl font-black">{fullName}</h1>
         <div className="mt-2"><StatusChip status={m.status} /></div>
-        {m.plan?.name && <p className="mt-2 text-xs text-muted-foreground">Plan {m.plan.name}</p>}
+        {m.plans?.name && <p className="mt-2 text-xs text-muted-foreground">Plan {m.plans.name}</p>}
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -81,10 +105,10 @@ function MemberDetail() {
         </TabsList>
 
         <TabsContent value="info" className="mt-4 space-y-2">
-          <InfoRow icon={Mail} label="Email" value={m.email || "—"} />
+          <InfoRow icon={Mail} label="Email" value={m.wodplace_users?.email || "—"} />
           <InfoRow icon={Phone} label="Teléfono" value={m.phone || "—"} />
-          <InfoRow icon={Calendar} label="Ingresó" value={m.join_date ? format(new Date(m.join_date), "dd MMM yyyy") : "—"} />
-          <InfoRow icon={Calendar} label="Próximo pago" value={m.next_payment ? format(new Date(m.next_payment), "dd MMM yyyy") : "—"} />
+          <InfoRow icon={Calendar} label="Ingresó" value={m.joined_at ? format(new Date(m.joined_at), "dd MMM yyyy") : "—"} />
+          <InfoRow icon={Calendar} label="Próximo pago" value={m.next_payment_at ? format(new Date(m.next_payment_at), "dd MMM yyyy") : "—"} />
           {m.notes && (
             <div className="rounded-2xl border bg-card p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observaciones</p>
@@ -110,7 +134,7 @@ function MemberDetail() {
           {attendance.data?.length === 0 && <Empty text="Sin asistencias" />}
           {attendance.data?.map((a) => (
             <div key={a.id} className="rounded-2xl border bg-card p-3 text-sm">
-              {format(new Date(a.checked_in_at), "dd MMM yyyy · HH:mm")}
+              {format(new Date(a.attended_at), "dd MMM yyyy · HH:mm")}
             </div>
           ))}
         </TabsContent>

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 export type Announcement = {
   id: string;
   title: string;
-  body: string | null;
+  body: string;
   image_url: string | null;
   send_push: boolean;
   show_banner: boolean;
@@ -12,30 +12,35 @@ export type Announcement = {
   created_at: string;
 };
 
-export async function fetchAnnouncements(): Promise<Announcement[]> {
+export async function fetchAnnouncements(boxId: string): Promise<Announcement[]> {
   const { data, error } = await supabase
     .from("announcements")
     .select("id,title,body,image_url,send_push,show_banner,banner_days,expires_at,created_at")
+    .eq("box_id", boxId)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Announcement[];
 }
 
-export async function fetchMyReads(): Promise<Set<string>> {
+export async function fetchMyReads(boxId: string): Promise<Set<string>> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) return new Set();
-  const { data, error } = await supabase.from("announcement_reads").select("announcement_id").eq("user_id", uid);
+  const { data, error } = await supabase
+    .from("announcement_reads")
+    .select("announcement_id")
+    .eq("box_id", boxId)
+    .eq("user_id", uid);
   if (error) throw error;
   return new Set((data ?? []).map((r) => r.announcement_id));
 }
 
-export async function markRead(announcementId: string) {
+export async function markRead(announcementId: string, boxId: string) {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) return;
   await supabase.from("announcement_reads").upsert(
-    { announcement_id: announcementId, user_id: uid },
+    { announcement_id: announcementId, box_id: boxId, user_id: uid },
     { onConflict: "announcement_id,user_id" },
   );
 }
